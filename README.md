@@ -4,21 +4,21 @@ Mentora is a production-grade, secure, modern educational web platform connectin
 
 ---
 
-## 🌟 Key Features
+## Key Features
 
-- **🔐 Role-Based Access Control (RBAC)**: Distinct permissions and interactive portals for `STUDENT`, `TEACHER`, and `ADMIN`.
-- **💬 Real-Time Messaging**: STOMP over WebSockets for 1-on-1 teacher-student chat and class discussion rooms.
-- **📚 Academic Management**: Department, course, subject, and weekly timetable management.
-- **📝 Assignments & Grading**: Assignment creation, deadline tracking, solution file upload, grading, and teacher feedback.
-- **📊 Attendance & Analytics**: Class attendance marking, student percentage tracking, and CGPA metrics.
-- **💬 Interactive Discussion Forum**: Q&A community forum with category filters, upvotes, and answer thread replies.
-- **📢 Notice Board**: Priority-coded system and department announcement broadcasts.
-- **📁 Study Material Hub**: Categorized resource repository for slides, reference manuals, and code samples.
-- **🎨 Modern UI/UX**: Dark/Light mode theme engine, glassmorphic layout cards, responsive mobile sidebar, and smooth micro-interactions.
+- ** Role-Based Access Control (RBAC)**: Distinct permissions and interactive portals for `STUDENT`, `TEACHER`, and `ADMIN`.
+- ** Real-Time Messaging**: STOMP over WebSockets for 1-on-1 teacher-student chat and class discussion rooms.
+- ** Academic Management**: Department, course, subject, and weekly timetable management.
+- ** Assignments & Grading**: Assignment creation, deadline tracking, solution file upload, grading, and teacher feedback.
+- ** Attendance & Analytics**: Class attendance marking, student percentage tracking, and CGPA metrics.
+- ** Interactive Discussion Forum**: Q&A community forum with category filters, upvotes, and answer thread replies.
+- ** Notice Board**: Priority-coded system and department announcement broadcasts.
+- ** Study Material Hub**: Categorized resource repository for slides, reference manuals, and code samples.
+- ** Modern UI/UX**: Dark/Light mode theme engine, glassmorphic layout cards, responsive mobile sidebar, and smooth micro-interactions.
 
 ---
 
-## 🏗️ Project Architecture
+## Project Architecture
 
 Mentora is structured as a full-stack project containing two main subdirectories:
 
@@ -46,7 +46,7 @@ Mentora/
 
 ---
 
-## 🔑 Test Account Credentials
+## Test Account Credentials
 
 The backend automatically seeds the database on startup with ready-to-use test accounts:
 
@@ -60,7 +60,7 @@ The backend automatically seeds the database on startup with ready-to-use test a
 
 ---
 
-## 🚀 Getting Started
+## Getting Started
 
 ### 1. Backend Setup (`mentora-backend`)
 
@@ -93,7 +93,7 @@ The React development server will launch on `http://localhost:3000`.
 
 ---
 
-## ☁️ Deployment Guide
+## Deployment Guide
 
 - **Database**: Neon PostgreSQL (Set `spring.datasource.url` in `application.yml` for production).
 - **Backend Service**: Render / Railway (Deploy `mentora-backend` using Docker or Java runtime).
