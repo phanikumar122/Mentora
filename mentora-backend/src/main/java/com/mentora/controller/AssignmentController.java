@@ -69,7 +69,8 @@ public class AssignmentController {
     @DeleteMapping("/{id}")
     public ResponseEntity<?> deleteAssignment(@PathVariable Long id) {
         try {
-            submissionRepository.findByAssignmentId(id).forEach(submissionRepository::delete);
+            // BUG-9 FIX: Single bulk DELETE instead of loading submissions into memory
+            submissionRepository.deleteByAssignmentId(id);
             assignmentRepository.deleteById(id);
             return ResponseEntity.ok(Map.of("message", "Assignment deleted successfully!"));
         } catch (Exception e) {

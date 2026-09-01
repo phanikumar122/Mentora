@@ -154,7 +154,7 @@ export const AssignmentsPage: React.FC = () => {
       {loading ? (
         <div className="p-8 text-center text-xs text-slate-400">Loading assignments...</div>
       ) : assignments.length === 0 ? (
-        <div className="glass-card p-12 text-center rounded-2xl space-y-2">
+        <div className="academic-card p-12 text-center rounded-2xl space-y-2">
           <FileCheck className="w-10 h-10 text-slate-400 mx-auto" />
           <h3 className="text-sm font-bold">No Assignments Posted</h3>
           <p className="text-xs text-slate-500">There are no assignments published for your subjects.</p>
@@ -162,7 +162,7 @@ export const AssignmentsPage: React.FC = () => {
       ) : (
         <div className="space-y-4">
           {assignments.map((item) => (
-            <div key={item.id} className="glass-card p-5 rounded-2xl flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div key={item.id} className="academic-card p-5 rounded-2xl flex flex-col md:flex-row md:items-center justify-between gap-4">
               <div className="space-y-2 flex-1">
                 <div className="flex items-center space-x-2">
                   <span className="px-2.5 py-0.5 rounded text-[10px] font-bold bg-brand-500/10 text-brand-500">{item.subjectName}</span>

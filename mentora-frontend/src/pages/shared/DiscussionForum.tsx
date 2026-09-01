@@ -124,7 +124,7 @@ export const DiscussionForum: React.FC = () => {
       {loading ? (
         <div className="p-8 text-center text-xs text-slate-400">Loading discussion threads...</div>
       ) : posts.length === 0 ? (
-        <div className="glass-card p-12 text-center rounded-2xl space-y-2">
+        <div className="academic-card p-12 text-center rounded-2xl space-y-2">
           <MessageSquare className="w-10 h-10 text-slate-400 mx-auto" />
           <h3 className="text-sm font-bold">No Discussion Threads</h3>
           <p className="text-xs text-slate-500">Be the first to ask an academic question!</p>
@@ -132,7 +132,7 @@ export const DiscussionForum: React.FC = () => {
       ) : (
         <div className="space-y-4">
           {posts.map((post) => (
-            <div key={post.id} className="glass-card p-5 rounded-2xl flex space-x-4">
+            <div key={post.id} className="academic-card p-5 rounded-2xl flex space-x-4">
               <button
                 onClick={() => handleUpvote(post.id)}
                 className="flex flex-col items-center justify-center p-3 rounded-xl bg-slate-100 dark:bg-slate-800/80 hover:bg-brand-500/10 hover:text-brand-500 border border-slate-200 dark:border-slate-700 h-fit transition-colors"

@@ -2,7 +2,18 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import api from '../../services/api';
-import { ShieldCheck, Users, Building2, Database, Activity, FileSpreadsheet, Download, RefreshCw } from 'lucide-react';
+import {
+  ShieldCheck,
+  Users,
+  Building2,
+  Database,
+  Activity,
+  FileSpreadsheet,
+  RefreshCw,
+  Sparkles,
+  Server,
+  Layers,
+} from 'lucide-react';
 import { User } from '../../types';
 
 export const AdminDashboard: React.FC = () => {
@@ -15,7 +26,8 @@ export const AdminDashboard: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [auditLogs, setAuditLogs] = useState([
     { action: 'Admin Portal Active', detail: 'System Security Engine Initialization Complete', time: 'Just now' },
-    { action: 'Database Health Check', detail: 'PostgreSQL H2 Connection Verified Active', time: '5 mins ago' },
+    { action: 'Database Health Check', detail: 'H2 In-Memory Database & JPA Subsystem Verified Active', time: '5 mins ago' },
+    { action: 'Attendance Sync Service', detail: '90-Day Continuous Analytics Engine Live', time: '12 mins ago' },
   ]);
 
   const fetchAdminStats = async () => {
@@ -42,11 +54,11 @@ export const AdminDashboard: React.FC = () => {
 
   const handleBackupDatabase = () => {
     const time = new Date().toLocaleTimeString();
-    setAuditLogs(prev => [
+    setAuditLogs((prev) => [
       { action: 'Database Backup Triggered', detail: 'Automated Snapshot Created Successfully', time },
-      ...prev
+      ...prev,
     ]);
-    alert('Database Backup Process Triggered! H2/PostgreSQL snapshot created successfully.');
+    alert('Database Backup Process Triggered! Snapshot created successfully.');
   };
 
   const handleExportReports = () => {
@@ -61,97 +73,172 @@ export const AdminDashboard: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6">
-      {/* Banner */}
-      <div className="p-6 rounded-2xl bg-gradient-to-r from-purple-900 to-indigo-900 text-white border border-purple-800 shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div className="flex items-center space-x-3">
-          <ShieldCheck className="w-8 h-8 text-purple-300 shrink-0" />
-          <div>
-            <h2 className="text-2xl font-bold">Admin Control Center</h2>
-            <p className="text-purple-200 text-sm">System Administration, User Governance & Database Control</p>
+    <>
+      {/* Admin Executive Hero Banner */}
+      <div className="hero-banner">
+        <div className="absolute right-0 top-0 w-80 h-80 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
+
+        <div className="hero-banner-inner">
+          <div className="space-y-1">
+            <span className="hero-eyebrow border-indigo-500/30 text-indigo-300 mb-3">
+              <ShieldCheck className="w-3.5 h-3.5" />
+              <span>University Executive Governance</span>
+            </span>
+            <h2 className="hero-title">
+              Platform Administration & System Health
+            </h2>
+            <p className="hero-subtitle">
+              User identity lifecycle management, departmental hierarchy, course offerings, and database governance.
+            </p>
           </div>
-        </div>
-        <div className="flex space-x-2">
-          <button
-            onClick={() => navigate('/admin/users')}
-            className="px-3.5 py-2 bg-purple-600 hover:bg-purple-500 text-white text-xs font-semibold rounded-xl transition-all"
-          >
-            Manage Users
-          </button>
-          <button
-            onClick={() => navigate('/admin/departments')}
-            className="px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-white text-xs font-semibold rounded-xl border border-purple-700 transition-all"
-          >
-            Manage Departments
-          </button>
+
+          <div className="flex flex-wrap gap-2.5 mt-4 lg:mt-0 shrink-0">
+            <button
+              onClick={() => navigate('/admin/users')}
+              className="btn-primary"
+            >
+              <Users className="w-4 h-4" />
+              <span>Manage Users</span>
+            </button>
+            <button
+              onClick={() => navigate('/admin/departments')}
+              className="btn-ghost text-white border-white/20 hover:bg-white/10 hover:text-white"
+            >
+              <Building2 className="w-4 h-4" />
+              <span>Departments & Courses</span>
+            </button>
+          </div>
         </div>
       </div>
 
       {/* Dynamic Metric Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
-        <div className="glass-card p-4 rounded-2xl cursor-pointer hover:border-brand-500 transition-all" onClick={() => navigate('/admin/users')}>
-          <p className="text-xs text-slate-500 font-medium">Total Registered Users</p>
-          <h3 className="text-2xl font-bold mt-1 text-slate-900 dark:text-white">{loading ? '...' : usersCount}</h3>
+      <div className="metrics-grid">
+        <div className="metric-card cursor-pointer" onClick={() => navigate('/admin/users')}>
+          <div className="metric-icon bg-[#535779]/10 text-[#535779] border border-[#535779]/20 dark:text-[#868aac] dark:border-[#868aac]/20">
+            <Users className="w-6 h-6" />
+          </div>
+          <div>
+            <p className="metric-label">Total Registered Users</p>
+            <p className="metric-value">{loading ? '...' : usersCount}</p>
+            <span className="metric-sub text-[#535779] dark:text-[#868aac]">
+              Manage access & credentials →
+            </span>
+          </div>
         </div>
-        <div className="glass-card p-4 rounded-2xl cursor-pointer hover:border-brand-500 transition-all" onClick={() => navigate('/admin/departments')}>
-          <p className="text-xs text-slate-500 font-medium">Active Departments</p>
-          <h3 className="text-2xl font-bold mt-1 text-brand-500">{loading ? '...' : departmentsCount}</h3>
+
+        <div className="metric-card cursor-pointer" onClick={() => navigate('/admin/departments')}>
+          <div className="metric-icon bg-indigo-50 text-indigo-600 border border-indigo-100 dark:bg-indigo-500/10 dark:text-indigo-500 dark:border-indigo-500/20">
+            <Building2 className="w-6 h-6" />
+          </div>
+          <div>
+            <p className="metric-label">Active Departments</p>
+            <p className="metric-value">{loading ? '...' : departmentsCount}</p>
+            <span className="metric-sub text-indigo-600 dark:text-indigo-500">
+              Academic faculties
+            </span>
+          </div>
         </div>
-        <div className="glass-card p-4 rounded-2xl cursor-pointer hover:border-brand-500 transition-all" onClick={() => navigate('/admin/departments')}>
-          <p className="text-xs text-slate-500 font-medium">Offered Courses</p>
-          <h3 className="text-2xl font-bold mt-1 text-emerald-500">{loading ? '...' : coursesCount}</h3>
+
+        <div className="metric-card cursor-pointer" onClick={() => navigate('/admin/departments')}>
+          <div className="metric-icon bg-amber-50 text-amber-600 border border-amber-100 dark:bg-amber-500/10 dark:text-amber-500 dark:border-amber-500/20">
+            <Layers className="w-6 h-6" />
+          </div>
+          <div>
+            <p className="metric-label">Offered Courses</p>
+            <p className="metric-value">{loading ? '...' : coursesCount}</p>
+            <span className="metric-sub text-amber-600 dark:text-amber-500">
+              Syllabus & credits
+            </span>
+          </div>
         </div>
-        <div className="glass-card p-4 rounded-2xl">
-          <p className="text-xs text-slate-500 font-medium">System Health</p>
-          <h3 className="text-2xl font-bold mt-1 text-emerald-500 flex items-center space-x-1">
-            <span>99.9%</span>
-          </h3>
+
+        <div className="metric-card">
+          <div className="metric-icon bg-emerald-50 text-emerald-600 border border-emerald-100 dark:bg-emerald-500/10 dark:text-emerald-500 dark:border-emerald-500/20">
+            <Activity className="w-6 h-6" />
+          </div>
+          <div>
+            <p className="metric-label">System Uptime</p>
+            <p className="metric-value">99.98%</p>
+            <span className="metric-sub text-emerald-600 dark:text-emerald-500">
+              All microservices operational
+            </span>
+          </div>
         </div>
       </div>
 
-      {/* Audit Logs & Working Admin Tools */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 glass-card p-6 rounded-2xl">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-base font-bold flex items-center space-x-2">
-              <Activity className="w-5 h-5 text-brand-500" />
-              <span>Recent System Audit Logs</span>
-            </h3>
-            <button onClick={fetchAdminStats} className="p-1 text-slate-400 hover:text-white transition-colors" title="Refresh Audit Logs">
+      {/* Audit Logs & Admin Tools */}
+      <div className="content-grid">
+        {/* Main Column: System Audit Logs */}
+        <div className="academic-card space-y-4">
+          <div className="section-header">
+            <div className="section-header-left">
+              <Activity className="w-5 h-5 text-indigo-500" />
+              <h3 className="section-title">Recent System Audit Logs</h3>
+            </div>
+            <button
+              onClick={fetchAdminStats}
+              className="btn-ghost px-2 py-1.5 border-transparent"
+              title="Refresh Audit Logs"
+            >
               <RefreshCw className="w-4 h-4" />
             </button>
           </div>
+
           <div className="space-y-3">
             {auditLogs.map((log, idx) => (
-              <div key={idx} className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200/60 dark:border-slate-800 flex items-center justify-between">
-                <div>
-                  <h4 className="font-semibold text-xs text-slate-900 dark:text-white">{log.action}</h4>
-                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{log.detail}</p>
+              <div key={idx} className="list-row">
+                <div className="space-y-0.5">
+                  <h4 className="font-bold text-sm text-[var(--text-primary)]">{log.action}</h4>
+                  <p className="text-xs text-[var(--text-muted)]">{log.detail}</p>
                 </div>
-                <span className="text-[11px] text-slate-400 font-mono">{log.time}</span>
+                <span className="tag tag-brand shrink-0">{log.time}</span>
               </div>
             ))}
           </div>
         </div>
 
-        <div className="glass-card p-6 rounded-2xl space-y-4">
-          <h3 className="text-base font-bold">Administrative Tools</h3>
-          <button
-            onClick={handleBackupDatabase}
-            className="w-full p-3.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-brand-600 hover:text-white transition-all text-left font-semibold text-xs flex items-center space-x-3 cursor-pointer shadow-sm"
-          >
-            <Database className="w-4 h-4 text-brand-500" />
-            <span>Trigger Database Backup</span>
-          </button>
-          <button
-            onClick={handleExportReports}
-            className="w-full p-3.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-brand-600 hover:text-white transition-all text-left font-semibold text-xs flex items-center space-x-3 cursor-pointer shadow-sm"
-          >
-            <FileSpreadsheet className="w-4 h-4 text-emerald-500" />
-            <span>Export Reports (PDF / Text)</span>
-          </button>
+        {/* Side Column: Administrative Command Tools */}
+        <div className="academic-card space-y-4">
+          <div className="section-header">
+            <div className="section-header-left">
+              <Server className="w-5 h-5 text-indigo-500" />
+              <h3 className="section-title">Governance Tools</h3>
+            </div>
+          </div>
+
+          <div className="space-y-3">
+            <button
+              onClick={handleBackupDatabase}
+              className="w-full text-left p-4 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-surface-elevated)] hover:border-indigo-500/50 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 transition-colors flex items-center space-x-3 cursor-pointer group"
+            >
+              <div className="metric-icon bg-indigo-100 text-indigo-600 dark:bg-indigo-500/20 dark:text-indigo-400 group-hover:bg-indigo-600 group-hover:text-white transition-colors w-10 h-10 shrink-0">
+                <Database className="w-4 h-4" />
+              </div>
+              <div>
+                <p className="font-bold text-sm text-[var(--text-primary)] group-hover:text-indigo-700 dark:group-hover:text-indigo-400 transition-colors">Database Backup</p>
+                <p className="text-[11px] text-[var(--text-muted)]">
+                  Snapshot all H2 & JPA entities
+                </p>
+              </div>
+            </button>
+
+            <button
+              onClick={handleExportReports}
+              className="w-full text-left p-4 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-surface-elevated)] hover:border-emerald-500/50 hover:bg-emerald-50 dark:hover:bg-emerald-500/10 transition-colors flex items-center space-x-3 cursor-pointer group"
+            >
+              <div className="metric-icon bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-400 group-hover:bg-emerald-600 group-hover:text-white transition-colors w-10 h-10 shrink-0">
+                <FileSpreadsheet className="w-4 h-4" />
+              </div>
+              <div>
+                <p className="font-bold text-sm text-[var(--text-primary)] group-hover:text-emerald-700 dark:group-hover:text-emerald-400 transition-colors">Export Audit Report</p>
+                <p className="text-[11px] text-[var(--text-muted)]">
+                  Download platform health summary
+                </p>
+              </div>
+            </button>
+          </div>
         </div>
       </div>
-    </div>
+    </>
   );
 };

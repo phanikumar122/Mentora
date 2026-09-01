@@ -30,12 +30,14 @@ export const GradesPage: React.FC = () => {
         <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Review enrolled course credits, letter grades, and academic performance</p>
       </div>
 
-      {/* CGPA Summary Banner — FIXED MAJOR-5: no hardcoded values */}
-      <div className="p-6 rounded-2xl bg-gradient-to-r from-brand-600 to-indigo-600 text-white flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-xl shadow-brand-500/20">
+      {/* CGPA Summary Banner */}
+      <div className="p-6 rounded-2xl academic-gradient-hero text-white flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-xl">
         <div>
-          <span className="px-3 py-1 bg-white/20 backdrop-blur-md rounded-full text-xs font-semibold uppercase tracking-wider">Academic Performance Report</span>
+          <span className="px-3 py-1 bg-white/20 backdrop-blur-md rounded-full text-xs font-semibold uppercase tracking-wider">
+            Academic Performance Report
+          </span>
           <h3 className="text-2xl font-bold mt-2">Cumulative GPA: N/A</h3>
-          <p className="text-brand-100 text-xs mt-1">
+          <p className="text-slate-200 text-xs mt-1">
             Total Enrolled Courses: {courses.length} Course{courses.length !== 1 ? 's' : ''} &mdash; Grades will appear once faculty submit marks
           </p>
         </div>
@@ -45,7 +47,7 @@ export const GradesPage: React.FC = () => {
       </div>
 
       {/* Course Breakdown */}
-      <div className="glass-card p-6 rounded-2xl space-y-4">
+      <div className="academic-card p-6 rounded-2xl space-y-4">
         <h3 className="font-bold text-sm flex items-center space-x-2">
           <BookOpen className="w-4 h-4 text-brand-500" />
           <span>Registered Courses & Credit Allocation</span>

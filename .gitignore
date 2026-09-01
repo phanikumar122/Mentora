@@ -28,3 +28,7 @@ Thumbs.db
 
 # Database files
 *.db
+
+# Skills Artifacts
+Skills-Artifacts/
+Skills-Artifact/

@@ -1,5 +1,5 @@
 server:
-  port: 8080
+  port: 8081
   servlet:
     context-path: /
 
@@ -12,6 +12,16 @@ spring:
     driver-class-name: com.mysql.cj.jdbc.Driver
     username: 3Q9njwBTT5gHaSW.root
     password: Fj7IWdxW7C2v5xNq
+    # HikariCP connection pool — BUG FIX: reduce maxLifetime below TiDB's 5-min server timeout
+    # to prevent "connection closed" validation failures on idle connections
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 2
+      idle-timeout: 120000          # 2 minutes
+      max-lifetime: 180000          # 3 minutes (< TiDB's ~5 min server timeout)
+      connection-timeout: 30000     # 30 seconds
+      keepalive-time: 60000         # ping every 60s to keep connection alive
+      connection-test-query: SELECT 1
   jpa:
     hibernate:
       ddl-auto: update
@@ -25,6 +35,9 @@ mentora:
   app:
     jwtSecret: 404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970
     jwtExpirationMs: 86400000 # 24 hours
+  cors:
+    # BUG-13 FIX: Explicitly list allowed origins (used by SecurityConfig)
+    allowed-origins: http://localhost:3000,http://localhost:3001
 
 # SpringDoc OpenAPI Documentation
 springdoc:

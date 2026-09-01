@@ -140,7 +140,7 @@ export const StudyMaterialsPage: React.FC = () => {
       {loading ? (
         <div className="p-8 text-center text-xs text-slate-400">Loading resources...</div>
       ) : materials.length === 0 ? (
-        <div className="glass-card p-12 text-center rounded-2xl space-y-2">
+        <div className="academic-card p-12 text-center rounded-2xl space-y-2">
           <FolderDown className="w-10 h-10 text-slate-400 mx-auto" />
           <h3 className="text-sm font-bold">No Study Materials Uploaded</h3>
           <p className="text-xs text-slate-500">No resources published yet. Click "Upload Document" above to upload PDF or DOC files.</p>
@@ -148,7 +148,7 @@ export const StudyMaterialsPage: React.FC = () => {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {materials.map((item) => (
-            <div key={item.id} className="glass-card p-5 rounded-2xl space-y-3 flex flex-col justify-between">
+            <div key={item.id} className="academic-card p-5 rounded-2xl space-y-3 flex flex-col justify-between">
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <div className="p-2 rounded-xl bg-slate-100 dark:bg-slate-800">

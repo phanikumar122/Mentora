@@ -5,6 +5,8 @@ import com.mentora.entity.ChatMessage;
 import com.mentora.entity.User;
 import com.mentora.repository.ChatMessageRepository;
 import com.mentora.repository.UserRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.Payload;
@@ -19,6 +21,8 @@ import java.util.stream.Collectors;
 @RestController
 @RequestMapping("/api/v1/chat")
 public class ChatController {
+
+    private static final Logger log = LoggerFactory.getLogger(ChatController.class);
 
     private final SimpMessagingTemplate messagingTemplate;
     private final ChatMessageRepository chatMessageRepository;
@@ -118,13 +122,15 @@ public class ChatController {
                 try {
                     messagingTemplate.convertAndSendToUser(recipient.getId(), "/queue/messages", chatMessageDto);
                 } catch (Exception e) {
-                    // STOMP fallback
+                    // BUG-11 FIX: Log STOMP delivery failures instead of silently swallowing them
+                    log.warn("STOMP direct delivery failed for recipient='{}': {}", recipient.getId(), e.getMessage());
                 }
             } else if (chatMessageDto.getRoomId() != null) {
                 try {
                     messagingTemplate.convertAndSend("/topic/room/" + chatMessageDto.getRoomId(), chatMessageDto);
                 } catch (Exception e) {
-                    // STOMP fallback
+                    // BUG-11 FIX: Log STOMP room broadcast failures
+                    log.warn("STOMP room broadcast failed for roomId='{}': {}", chatMessageDto.getRoomId(), e.getMessage());
                 }
             }
         }

@@ -50,15 +50,11 @@ public class AcademicController {
     }
 
     @DeleteMapping("/departments/{id}")
+    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
     public ResponseEntity<?> deleteDepartment(@PathVariable Long id) {
         try {
-            // Nullify course-department links before deleting department
-            for (Course c : courseRepository.findAll()) {
-                if (c.getDepartment() != null && c.getDepartment().getId().equals(id)) {
-                    c.setDepartment(null);
-                    courseRepository.save(c);
-                }
-            }
+            // BUG-8 FIX: Single bulk UPDATE instead of loading all courses into memory
+            courseRepository.nullifyDepartmentById(id);
             departmentRepository.deleteById(id);
             return ResponseEntity.ok(Map.of("message", "Department deleted successfully!"));
         } catch (Exception e) {

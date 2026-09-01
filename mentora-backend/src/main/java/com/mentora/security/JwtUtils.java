@@ -17,7 +17,8 @@ public class JwtUtils {
     private String jwtSecret;
 
     @Value("${mentora.app.jwtExpirationMs}")
-    private int jwtExpirationMs;
+    // BUG-12 FIX: Use long to avoid integer overflow for expiry values > 24.8 days (~2.1B ms)
+    private long jwtExpirationMs;
 
     private SecretKey getSigningKey() {
         byte[] keyBytes = jwtSecret.getBytes(StandardCharsets.UTF_8);

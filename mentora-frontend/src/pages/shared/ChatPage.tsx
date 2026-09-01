@@ -87,7 +87,7 @@ export const ChatPage: React.FC = () => {
   };
 
   return (
-    <div className="h-[calc(100vh-7rem)] glass-card rounded-2xl overflow-hidden flex flex-col md:flex-row">
+    <div className="h-[calc(100vh-7rem)] academic-card rounded-2xl overflow-hidden flex flex-col md:flex-row">
       {/* Directory Contacts Sidebar */}
       <div className="w-full md:w-80 border-r border-slate-200 dark:border-slate-800 p-4 flex flex-col bg-slate-50/50 dark:bg-slate-900/50">
         <div className="flex items-center justify-between mb-4">

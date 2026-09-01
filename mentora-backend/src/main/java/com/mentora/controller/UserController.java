@@ -16,8 +16,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @RestController
@@ -58,19 +57,124 @@ public class UserController {
     }
 
     @GetMapping
-    public ResponseEntity<List<UserDto>> getAllUsers() {
-        List<UserDto> users = userRepository.findAll().stream()
-                .map(u -> UserDto.builder()
-                        .id(u.getId())
-                        .email(u.getEmail())
-                        .firstName(u.getFirstName())
-                        .lastName(u.getLastName())
-                        .role(u.getRole())
-                        .phoneNumber(u.getPhoneNumber())
-                        .isEnabled(u.getIsEnabled())
+    public ResponseEntity<List<Map<String, Object>>> getAllUsers() {
+        List<User> users = userRepository.findAll();
+        List<Student> allStudents = studentRepository.findAll();
+        List<Parent> allParents = parentRepository.findAll();
+
+        Map<String, Student> studentByUser = allStudents.stream()
+                .filter(s -> s.getUser() != null)
+                .collect(Collectors.toMap(s -> s.getUser().getId(), s -> s, (a, b) -> a));
+
+        Map<String, Parent> parentByUser = allParents.stream()
+                .filter(p -> p.getUser() != null)
+                .collect(Collectors.toMap(p -> p.getUser().getId(), p -> p, (a, b) -> a));
+
+        List<Map<String, Object>> result = new ArrayList<>();
+        for (User u : users) {
+            Map<String, Object> map = new HashMap<>();
+            map.put("id", u.getId());
+            map.put("email", u.getEmail());
+            map.put("firstName", u.getFirstName());
+            map.put("lastName", u.getLastName());
+            map.put("role", u.getRole());
+            map.put("phoneNumber", u.getPhoneNumber());
+            map.put("isEnabled", u.getIsEnabled());
+
+            if (u.getRole() == Role.ROLE_STUDENT) {
+                Student s = studentByUser.get(u.getId());
+                if (s != null && s.getAdvisor() != null && s.getAdvisor().getUser() != null) {
+                    map.put("advisorName", s.getAdvisor().getUser().getFirstName() + " " + s.getAdvisor().getUser().getLastName());
+                    map.put("advisorId", s.getAdvisor().getUser().getId());
+                }
+            } else if (u.getRole() == Role.ROLE_PARENT) {
+                Parent p = parentByUser.get(u.getId());
+                if (p != null && p.getStudentWard() != null) {
+                    map.put("wardName", p.getStudentWard().getFirstName() + " " + p.getStudentWard().getLastName());
+                    map.put("wardId", p.getStudentWard().getId());
+                    map.put("relationship", p.getRelationship());
+                }
+            }
+            result.add(map);
+        }
+
+        return ResponseEntity.ok(result);
+    }
+
+    /**
+     * Returns list of students who do NOT have an advisor assigned.
+     * BUG-7 FIX: Use repository-level findByAdvisorIsNull() (1 query) instead of
+     * fetching ALL users then hitting the DB per student O(N²).
+     */
+    @GetMapping("/students/unassigned-advisor")
+    public ResponseEntity<List<UserDto>> getUnassignedStudents() {
+        return ResponseEntity.ok(
+            studentRepository.findByAdvisorIsNull().stream()
+                .filter(s -> s.getUser() != null)
+                .map(s -> UserDto.builder()
+                        .id(s.getUser().getId())
+                        .email(s.getUser().getEmail())
+                        .firstName(s.getUser().getFirstName())
+                        .lastName(s.getUser().getLastName())
+                        .role(s.getUser().getRole())
+                        .phoneNumber(s.getUser().getPhoneNumber())
                         .build())
-                .collect(Collectors.toList());
-        return ResponseEntity.ok(users);
+                .collect(Collectors.toList())
+        );
+    }
+
+    /**
+     * For a Student user: returns their assigned Teacher mentor.
+     */
+    @GetMapping("/students/my-advisor")
+    public ResponseEntity<?> getMyAdvisor(Authentication authentication) {
+        if (authentication == null) return ResponseEntity.badRequest().build();
+        User user = userRepository.findByEmail(authentication.getName()).orElse(null);
+        if (user == null || user.getRole() != Role.ROLE_STUDENT) {
+            return ResponseEntity.ok(Map.of("message", "Not a student account."));
+        }
+
+        Student student = studentRepository.findByUserId(user.getId()).orElse(null);
+        if (student == null || student.getAdvisor() == null || student.getAdvisor().getUser() == null) {
+            return ResponseEntity.ok(Map.of("message", "No mentor assigned yet."));
+        }
+
+        User advisorUser = student.getAdvisor().getUser();
+        return ResponseEntity.ok(Map.of(
+                "advisorUserId", advisorUser.getId(),
+                "advisorName", advisorUser.getFirstName() + " " + advisorUser.getLastName(),
+                "advisorEmail", advisorUser.getEmail(),
+                "designation", student.getAdvisor().getDesignation() != null ? student.getAdvisor().getDesignation() : "Faculty Mentor",
+                "department", student.getAdvisor().getDepartment() != null ? student.getAdvisor().getDepartment().getName() : "Academic Department"
+        ));
+    }
+
+    /**
+     * For a Teacher user: returns all students assigned to them.
+     */
+    @GetMapping("/teachers/my-students")
+    public ResponseEntity<?> getMyAdvisees(Authentication authentication) {
+        if (authentication == null) return ResponseEntity.badRequest().build();
+        User teacherUser = userRepository.findByEmail(authentication.getName()).orElse(null);
+        if (teacherUser == null || teacherUser.getRole() != Role.ROLE_TEACHER) {
+            return ResponseEntity.ok(Collections.emptyList());
+        }
+
+        List<Student> advisees = studentRepository.findByAdvisorUserId(teacherUser.getId());
+        List<Map<String, Object>> result = new ArrayList<>();
+        for (Student s : advisees) {
+            if (s.getUser() != null) {
+                result.add(Map.of(
+                        "studentUserId", s.getUser().getId(),
+                        "name", s.getUser().getFirstName() + " " + s.getUser().getLastName(),
+                        "email", s.getUser().getEmail(),
+                        "rollNumber", s.getRollNumber() != null ? s.getRollNumber() : "N/A",
+                        "semester", s.getSemester() != null ? s.getSemester() : 1,
+                        "cgpa", s.getCgpa() != null ? s.getCgpa() : 0.0
+                ));
+            }
+        }
+        return ResponseEntity.ok(result);
     }
 
     @PostMapping("/assign-student-teacher")
@@ -101,7 +205,23 @@ public class UserController {
         student.setAdvisor(teacher);
         studentRepository.save(student);
 
-        return ResponseEntity.ok(Map.of("message", "Student " + studentUser.getFirstName() + " assigned successfully to Professor " + teacherUser.getLastName() + "!"));
+        return ResponseEntity.ok(Map.of(
+                "message", "Student " + studentUser.getFirstName() + " assigned successfully to Professor " + teacherUser.getLastName() + "!",
+                "studentUserId", studentUserId,
+                "teacherUserId", teacherUserId
+        ));
+    }
+
+    @PostMapping("/unassign-student-teacher")
+    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
+    public ResponseEntity<?> unassignStudentTeacher(@RequestBody Map<String, String> payload) {
+        String studentUserId = payload.get("studentUserId");
+        Student student = studentRepository.findByUserId(studentUserId).orElse(null);
+        if (student != null) {
+            student.setAdvisor(null);
+            studentRepository.save(student);
+        }
+        return ResponseEntity.ok(Map.of("message", "Mentor unlinked successfully."));
     }
 
     @PostMapping("/assign-parent-student")
@@ -140,14 +260,38 @@ public class UserController {
             return ResponseEntity.ok(Map.of("message", "No student ward linked yet. Contact Administrator to link your child's student account."));
         }
 
-        return ResponseEntity.ok(parent.getStudentWard());
+        User ward = parent.getStudentWard();
+        Student student = studentRepository.findByUserId(ward.getId()).orElse(null);
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("id", ward.getId());
+        response.put("firstName", ward.getFirstName());
+        response.put("lastName", ward.getLastName());
+        response.put("email", ward.getEmail());
+        response.put("phoneNumber", ward.getPhoneNumber());
+        response.put("relationship", parent.getRelationship() != null ? parent.getRelationship() : "Parent/Guardian");
+
+        if (student != null) {
+            response.put("rollNumber", student.getRollNumber());
+            response.put("semester", student.getSemester() != null ? student.getSemester() : 1);
+            response.put("cgpa", student.getCgpa() != null ? student.getCgpa() : 0.0);
+            if (student.getDepartment() != null) {
+                response.put("departmentName", student.getDepartment().getName());
+            }
+            if (student.getAdvisor() != null && student.getAdvisor().getUser() != null) {
+                response.put("advisorUserId", student.getAdvisor().getUser().getId());
+                response.put("advisorName", "Prof. " + student.getAdvisor().getUser().getFirstName() + " " + student.getAdvisor().getUser().getLastName());
+                response.put("advisorEmail", student.getAdvisor().getUser().getEmail());
+            }
+        }
+
+        return ResponseEntity.ok(response);
     }
 
     @DeleteMapping("/{id}")
     @PreAuthorize("hasAuthority('ROLE_ADMIN')")
     public ResponseEntity<?> deleteUser(@PathVariable String id) {
         try {
-            // FIXED MAJOR-2: Clean up Attendance FK references before deleting Student entity
             studentRepository.findByUserId(id).ifPresent(student -> {
                 attendanceRepository.deleteByStudentId(student.getId());
                 studentRepository.delete(student);
@@ -161,3 +305,4 @@ public class UserController {
         }
     }
 }
+

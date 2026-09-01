@@ -13,9 +13,17 @@ import java.util.List;
 @Repository
 public interface AttendanceRepository extends JpaRepository<Attendance, Long> {
     List<Attendance> findByStudentId(Long studentId);
+    List<Attendance> findByStudentIdOrderByDateDesc(Long studentId);
     List<Attendance> findBySubjectIdAndDate(Long subjectId, LocalDate date);
     List<Attendance> findByStudentIdAndSubjectId(Long studentId, Long subjectId);
     List<Attendance> findByCourseId(Long courseId);
+
+    @Query("SELECT a FROM Attendance a WHERE a.student.id = :studentId AND a.date BETWEEN :startDate AND :endDate ORDER BY a.date ASC")
+    List<Attendance> findByStudentIdAndDateBetween(
+            @Param("studentId") Long studentId,
+            @Param("startDate") LocalDate startDate,
+            @Param("endDate") LocalDate endDate
+    );
 
     @Modifying
     @Transactional
@@ -27,3 +35,4 @@ public interface AttendanceRepository extends JpaRepository<Attendance, Long> {
     @Query("DELETE FROM Attendance a WHERE a.course.id = :courseId")
     void deleteByCourseId(@Param("courseId") Long courseId);
 }
+

@@ -26,8 +26,8 @@ cd mentora-backend
 .\mvnw.cmd spring-boot:run
 ```
 
-- **Backend API**: `http://localhost:8080`
-- **Swagger OpenAPI Docs**: `http://localhost:8080/swagger-ui.html`
+- **Backend API**: `http://localhost:8081`
+- **Swagger OpenAPI Docs**: `http://localhost:8081/swagger-ui.html`
 
 ### 2. Start the Web Client (`mentora-frontend`)
 

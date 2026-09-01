@@ -167,7 +167,7 @@ export const AdminDepartments: React.FC = () => {
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Departments List */}
-        <div className="glass-card p-6 rounded-2xl space-y-4">
+        <div className="academic-card p-6 rounded-2xl space-y-4">
           <div className="flex items-center justify-between">
             <h3 className="font-bold text-sm flex items-center space-x-2">
               <Building2 className="w-4 h-4 text-brand-500" />
@@ -209,7 +209,7 @@ export const AdminDepartments: React.FC = () => {
         </div>
 
         {/* Courses List */}
-        <div className="glass-card p-6 rounded-2xl space-y-4">
+        <div className="academic-card p-6 rounded-2xl space-y-4">
           <div className="flex items-center justify-between">
             <h3 className="font-bold text-sm flex items-center space-x-2">
               <BookOpen className="w-4 h-4 text-emerald-500" />

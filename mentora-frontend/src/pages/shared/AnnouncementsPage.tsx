@@ -137,7 +137,7 @@ export const AnnouncementsPage: React.FC = () => {
       {loading ? (
         <div className="p-8 text-center text-xs text-slate-400">Loading live announcements...</div>
       ) : announcements.length === 0 ? (
-        <div className="glass-card p-12 text-center rounded-2xl space-y-3">
+        <div className="academic-card p-12 text-center rounded-2xl space-y-3">
           <Megaphone className="w-10 h-10 text-brand-500 mx-auto" />
           <h3 className="text-sm font-bold">No Announcements Published Yet</h3>
           <p className="text-xs text-slate-500">
@@ -156,7 +156,7 @@ export const AnnouncementsPage: React.FC = () => {
       ) : (
         <div className="space-y-4">
           {announcements.map((item) => (
-            <div key={item.id} className="glass-card p-5 rounded-2xl space-y-3">
+            <div key={item.id} className="academic-card p-5 rounded-2xl space-y-3">
               <div className="flex items-center justify-between">
                 <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${
                   item.priority === 'HIGH' || item.priority === 'URGENT'

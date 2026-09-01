@@ -1,13 +1,32 @@
 package com.mentora.dto;
 
 import com.mentora.entity.Role;
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 
+// BUG-5 FIX: Added Jakarta validation annotations so @Valid in AuthController enforces
+// non-null, non-blank, properly-formatted email and a minimum-length password.
 public class RegisterRequest {
+
+    @NotBlank(message = "Email is required")
+    @Email(message = "Email must be a valid email address")
     private String email;
+
+    @NotBlank(message = "Password is required")
+    @Size(min = 6, message = "Password must be at least 6 characters")
     private String password;
+
+    @NotBlank(message = "First name is required")
     private String firstName;
+
+    @NotBlank(message = "Last name is required")
     private String lastName;
+
+    @NotNull(message = "Role is required")
     private Role role;
+
     private String phoneNumber;
 
     public RegisterRequest() {}

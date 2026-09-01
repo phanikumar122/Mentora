@@ -2,8 +2,35 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import api, { getApiErrorMessage } from '../../services/api';
-import { Users, FileText, CheckSquare, Upload, Plus, Send, X, BookOpen, FileCheck, ShieldAlert } from 'lucide-react';
+import {
+  Users,
+  FileText,
+  Upload,
+  Plus,
+  Send,
+  X,
+  BookOpen,
+  FileCheck,
+  ShieldAlert,
+  GraduationCap,
+  MessageSquare,
+  CalendarCheck,
+  Sparkles,
+} from 'lucide-react';
 import { Subject, Assignment } from '../../types';
+
+interface AdviseeStudent {
+  id: string;
+  studentEntityId?: number;
+  firstName: string;
+  lastName: string;
+  email: string;
+  phoneNumber?: string;
+  rollNumber?: string;
+  semester?: number;
+  cgpa?: number;
+  departmentName?: string;
+}
 
 export const TeacherDashboard: React.FC = () => {
   const { user } = useAuth();
@@ -12,6 +39,7 @@ export const TeacherDashboard: React.FC = () => {
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [totalStudents, setTotalStudents] = useState<number>(0);
+  const [myAdvisees, setMyAdvisees] = useState<AdviseeStudent[]>([]);
   const [loading, setLoading] = useState(true);
 
   // Modals
@@ -33,20 +61,21 @@ export const TeacherDashboard: React.FC = () => {
   const [matSubmitting, setMatSubmitting] = useState(false);
   const [matError, setMatError] = useState<string | null>(null);
 
-  // INFO-4: stabilize with useCallback to fix useEffect deps
   const fetchDashboardData = useCallback(async () => {
     try {
       setLoading(true);
-      const [subsRes, assRes, usersRes] = await Promise.all([
+      const [subsRes, assRes, usersRes, advRes] = await Promise.all([
         api.get('/subjects').catch(() => ({ data: [] })),
         api.get('/assignments').catch(() => ({ data: [] })),
         api.get('/users').catch(() => ({ data: [] })),
+        api.get('/users/teachers/my-students').catch(() => ({ data: [] })),
       ]);
 
       setSubjects(subsRes.data || []);
       setAssignments(assRes.data || []);
       const studentsCount = (usersRes.data || []).filter((u: any) => u.role === 'ROLE_STUDENT').length;
       setTotalStudents(studentsCount);
+      setMyAdvisees(advRes.data || []);
     } catch (err) {
       console.error('Error loading teacher dashboard data:', err);
     } finally {
@@ -123,30 +152,36 @@ export const TeacherDashboard: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6">
-      {/* Faculty Banner with Active Buttons */}
-      <div className="p-6 rounded-2xl bg-gradient-to-r from-slate-900 to-slate-800 text-white border border-slate-700 shadow-xl relative overflow-hidden">
-        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div>
-            <span className="px-3 py-1 bg-brand-500/20 text-brand-400 border border-brand-500/30 rounded-full text-xs font-semibold uppercase tracking-wider">
-              Faculty Portal
+    <>
+      {/* Faculty Hero Command Banner */}
+      <div className="hero-banner">
+        <div className="absolute right-0 top-0 w-80 h-80 bg-brand-600/15 rounded-full blur-3xl pointer-events-none" />
+
+        <div className="hero-banner-inner">
+          <div className="space-y-1">
+            <span className="hero-eyebrow border-indigo-500/30 text-indigo-300 mb-3">
+              <Sparkles className="w-3.5 h-3.5" />
+              <span>Faculty Professor Portal</span>
             </span>
-            <h2 className="text-2xl font-bold mt-2">Welcome, {user?.firstName ? `Prof. ${user.lastName}` : 'Faculty Member'}</h2>
-            <p className="text-slate-400 text-sm mt-1">
-              Associate Professor — Academic Management Dashboard
+            <h2 className="hero-title">
+              Welcome, {user?.firstName ? `Prof. ${user.firstName} ${user.lastName}` : 'Faculty Member'}
+            </h2>
+            <p className="hero-subtitle">
+              Coursework administration, lecture material distribution, advisee mentorship, and classroom attendance governance.
             </p>
           </div>
-          <div className="flex space-x-3">
+
+          <div className="flex flex-wrap gap-2.5 shrink-0 mt-4 lg:mt-0">
             <button
               onClick={() => { setShowAssignmentModal(true); setAssignError(null); }}
-              className="px-4 py-2 bg-brand-600 hover:bg-brand-500 text-white text-sm font-semibold rounded-xl flex items-center space-x-2 shadow-lg shadow-brand-500/30 transition-all cursor-pointer"
+              className="btn-primary"
             >
               <Plus className="w-4 h-4" />
               <span>Create Assignment</span>
             </button>
             <button
               onClick={() => { setShowMaterialModal(true); setMatError(null); }}
-              className="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white text-sm font-semibold rounded-xl flex items-center space-x-2 shadow-md transition-all cursor-pointer"
+              className="btn-ghost text-white border-white/20 hover:bg-white/10 hover:text-white"
             >
               <Upload className="w-4 h-4" />
               <span>Upload Material</span>
@@ -156,98 +191,140 @@ export const TeacherDashboard: React.FC = () => {
       </div>
 
       {/* Dynamic Overview Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="glass-card p-5 rounded-2xl">
-          <div className="flex justify-between items-start">
-            <div>
-              <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Total Registered Students</p>
-              <h3 className="text-2xl font-bold text-slate-900 dark:text-white mt-1">{totalStudents}</h3>
-            </div>
-            <div className="p-2.5 bg-brand-500/10 text-brand-500 rounded-xl">
-              <Users className="w-5 h-5" />
-            </div>
+      <div className="metrics-grid">
+        <div className="metric-card cursor-pointer" onClick={() => navigate('/admin/users')}>
+          <div className="metric-icon bg-indigo-50 text-indigo-600 border border-indigo-100 dark:bg-indigo-500/10 dark:text-indigo-500 dark:border-indigo-500/20">
+            <Users className="w-6 h-6" />
+          </div>
+          <div>
+            <p className="metric-label">Department Enrolled</p>
+            <p className="metric-value">{totalStudents}</p>
+            <span className="metric-sub text-indigo-600 dark:text-indigo-500">
+              Active registered students
+            </span>
           </div>
         </div>
 
-        <div className="glass-card p-5 rounded-2xl">
-          <div className="flex justify-between items-start">
-            <div>
-              <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Published Assignments</p>
-              <h3 className="text-2xl font-bold text-amber-500 mt-1">{assignments.length}</h3>
-            </div>
-            <div className="p-2.5 bg-amber-500/10 text-amber-500 rounded-xl">
-              <FileText className="w-5 h-5" />
-            </div>
+        <div className="metric-card cursor-pointer" onClick={() => navigate('/assignments')}>
+          <div className="metric-icon bg-amber-50 text-amber-600 border border-amber-100 dark:bg-amber-500/10 dark:text-amber-500 dark:border-amber-500/20">
+            <FileText className="w-6 h-6" />
+          </div>
+          <div>
+            <p className="metric-label">Published Course Tasks</p>
+            <p className="metric-value">{assignments.length}</p>
+            <span className="metric-sub text-amber-600 dark:text-amber-500">
+              Coursework in progress
+            </span>
           </div>
         </div>
 
-        <div className="glass-card p-5 rounded-2xl">
-          <div className="flex justify-between items-start">
-            <div>
-              <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Active Subjects</p>
-              <h3 className="text-2xl font-bold text-emerald-500 mt-1">{subjects.length}</h3>
-            </div>
-            <div className="p-2.5 bg-emerald-500/10 text-emerald-500 rounded-xl">
-              <CheckSquare className="w-5 h-5" />
-            </div>
+        <div className="metric-card">
+          <div className="metric-icon bg-emerald-50 text-emerald-600 border border-emerald-100 dark:bg-emerald-500/10 dark:text-emerald-500 dark:border-emerald-500/20">
+            <GraduationCap className="w-6 h-6" />
+          </div>
+          <div>
+            <p className="metric-label">Assigned Advisees</p>
+            <p className="metric-value">{myAdvisees.length}</p>
+            <span className="metric-sub text-emerald-600 dark:text-emerald-500">
+              1:1 Mentored scholars
+            </span>
           </div>
         </div>
       </div>
 
-      {/* Teaching Subjects List */}
-      <div className="glass-card p-6 rounded-2xl">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-base font-bold flex items-center space-x-2">
-            <BookOpen className="w-5 h-5 text-brand-500" />
-            <span>My Teaching Subjects</span>
-          </h3>
-          <button
-            onClick={() => navigate('/attendance')}
-            className="px-3 py-1.5 bg-slate-100 dark:bg-slate-800 hover:bg-brand-500 hover:text-white rounded-xl text-xs font-semibold transition-all cursor-pointer"
-          >
-            Mark Class Attendance
-          </button>
-        </div>
-
-        {loading ? (
-          <div className="p-6 text-center text-xs text-slate-400">Loading subjects...</div>
-        ) : subjects.length === 0 ? (
-          <div className="p-8 text-center text-xs text-slate-500 space-y-2">
-            <p>No active subjects assigned yet.</p>
-            <button onClick={() => navigate('/admin/departments')} className="px-3 py-1.5 bg-brand-600 text-white rounded-xl font-medium cursor-pointer">
-              Go to Academic Management
-            </button>
+      <div className="content-grid">
+        {/* Advisees & Mentored Students Section */}
+        <div className="academic-card space-y-4">
+          <div className="section-header">
+            <div className="section-header-left">
+              <GraduationCap className="w-5 h-5 text-indigo-500" />
+              <h3 className="section-title">Faculty Advisees & Mentorship Roster</h3>
+            </div>
+            <span className="tag tag-indigo">
+              {myAdvisees.length} Mentored
+            </span>
           </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {subjects.map((sub) => (
-              <div key={sub.id} className="p-5 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200/80 dark:border-slate-800 space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="px-2.5 py-1 rounded bg-brand-500/10 text-brand-500 font-bold text-xs">{sub.code}</span>
-                </div>
-                <h4 className="font-bold text-sm text-slate-900 dark:text-white">{sub.name}</h4>
-                <div className="flex items-center justify-between pt-2 border-t border-slate-200/60 dark:border-slate-700/60">
-                  <span className="text-xs text-slate-500">Active Subject</span>
+
+          {myAdvisees.length === 0 ? (
+            <div className="empty-state">
+              <p className="empty-state-text">No students currently assigned as your mentees.</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 gap-3">
+              {myAdvisees.map((adv) => (
+                <div key={adv.id} className="list-row group">
+                  <div className="space-y-1">
+                    <h4 className="font-bold text-sm text-[var(--text-primary)]">
+                      {adv.firstName} {adv.lastName}
+                    </h4>
+                    <p className="text-[11px] text-[var(--text-muted)] font-mono">{adv.email}</p>
+                    <span className="tag tag-indigo mt-1 inline-flex">
+                      {adv.departmentName || 'Computer Science'} • Sem {adv.semester || 4}
+                    </span>
+                  </div>
                   <button
-                    onClick={() => navigate('/attendance')}
-                    className="px-3 py-1.5 bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 rounded-lg text-xs font-medium hover:opacity-90 transition-opacity cursor-pointer"
+                    onClick={() => navigate('/chat')}
+                    className="p-2.5 rounded-xl bg-indigo-50 text-indigo-600 hover:bg-indigo-600 hover:text-white dark:bg-indigo-500/10 dark:text-indigo-500 dark:hover:bg-indigo-500 dark:hover:text-white transition-colors cursor-pointer"
+                    title="Message Advisee"
                   >
-                    Manage Class Roster
+                    <MessageSquare className="w-4 h-4" />
                   </button>
                 </div>
-              </div>
-            ))}
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Teaching Subjects List */}
+        <div className="academic-card space-y-4">
+          <div className="section-header">
+            <div className="section-header-left">
+              <BookOpen className="w-5 h-5 text-indigo-500" />
+              <h3 className="section-title">My Teaching Subjects</h3>
+            </div>
           </div>
-        )}
+
+          {loading ? (
+            <div className="empty-state">Loading subjects...</div>
+          ) : subjects.length === 0 ? (
+            <div className="empty-state border-none bg-[var(--bg-surface-elevated)]">
+              <p className="empty-state-text">No active subjects assigned yet.</p>
+              <button onClick={() => navigate('/admin/departments')} className="btn-primary mt-2">
+                Go to Academic Management
+              </button>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {subjects.map((sub) => (
+                <div key={sub.id} className="list-row flex-col items-stretch gap-2.5">
+                  <div className="flex items-center justify-between">
+                    <span className="tag tag-brand">{sub.code}</span>
+                  </div>
+                  <h4 className="font-bold text-sm text-[var(--text-primary)]">{sub.name}</h4>
+                  <div className="divider my-1" />
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-[var(--text-muted)]">Active Subject</span>
+                    <button
+                      onClick={() => navigate('/attendance')}
+                      className="btn-primary py-1.5 px-3 text-xs"
+                    >
+                      <CalendarCheck className="w-3.5 h-3.5 mr-1.5 inline" /> Mark Attendance
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Modal 1: Create Assignment */}
       {showAssignmentModal && (
         <div className="fixed inset-0 bg-slate-950/70 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 max-w-lg w-full space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
-              <h3 className="text-base font-bold">Create New Assignment</h3>
-              <button onClick={() => setShowAssignmentModal(false)} className="text-slate-400 hover:text-white">
+          <div className="bg-[var(--bg-surface)] border border-[var(--border-subtle)] rounded-2xl p-6 max-w-lg w-full space-y-4 shadow-2xl">
+            <div className="flex items-center justify-between border-b border-[var(--border-subtle)] pb-3">
+              <h3 className="text-base font-bold font-display">Create New Assignment</h3>
+              <button onClick={() => setShowAssignmentModal(false)} className="text-[var(--text-muted)] hover:text-[var(--text-primary)]">
                 <X className="w-5 h-5" />
               </button>
             </div>
@@ -261,49 +338,49 @@ export const TeacherDashboard: React.FC = () => {
 
             <form onSubmit={handleCreateAssignment} className="space-y-4">
               <div>
-                <label className="block text-xs font-semibold mb-1">Assignment Title</label>
+                <label className="block text-xs font-semibold mb-1.5 text-[var(--text-primary)]">Assignment Title</label>
                 <input
                   type="text"
                   value={assignTitle}
                   onChange={(e) => setAssignTitle(e.target.value)}
                   required
                   placeholder="e.g. Implementation of Red-Black Trees"
-                  className="w-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-brand-500"
+                  className="w-full bg-[var(--bg-app)] border border-[var(--border-subtle)] rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#535779]"
                 />
               </div>
               <div>
-                <label className="block text-xs font-semibold mb-1">Max Marks</label>
+                <label className="block text-xs font-semibold mb-1.5 text-[var(--text-primary)]">Max Marks</label>
                 <input
                   type="number"
                   value={assignMaxMarks}
                   onChange={(e) => setAssignMaxMarks(Number(e.target.value))}
                   required
-                  className="w-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-brand-500"
+                  className="w-full bg-[var(--bg-app)] border border-[var(--border-subtle)] rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#535779]"
                 />
               </div>
               <div>
-                <label className="block text-xs font-semibold mb-1">Instructions / Description</label>
+                <label className="block text-xs font-semibold mb-1.5 text-[var(--text-primary)]">Instructions / Description</label>
                 <textarea
                   value={assignDesc}
                   onChange={(e) => setAssignDesc(e.target.value)}
                   required
                   rows={4}
                   placeholder="Detailed assignment instructions for students..."
-                  className="w-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-brand-500"
+                  className="w-full bg-[var(--bg-app)] border border-[var(--border-subtle)] rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#535779]"
                 />
               </div>
-              <div className="flex justify-end space-x-2 pt-2">
+              <div className="flex justify-end space-x-3 pt-2">
                 <button
                   type="button"
                   onClick={() => setShowAssignmentModal(false)}
-                  className="px-4 py-2 bg-slate-200 dark:bg-slate-800 rounded-xl text-xs font-semibold"
+                  className="btn-ghost"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={assignSubmitting}
-                  className="px-4 py-2 bg-brand-600 hover:bg-brand-500 text-white rounded-xl text-xs font-semibold flex items-center space-x-1.5 cursor-pointer"
+                  className="btn-primary"
                 >
                   <Send className="w-3.5 h-3.5" />
                   <span>{assignSubmitting ? 'Publishing...' : 'Publish Assignment'}</span>
@@ -317,10 +394,10 @@ export const TeacherDashboard: React.FC = () => {
       {/* Modal 2: Upload Material with File Picker */}
       {showMaterialModal && (
         <div className="fixed inset-0 bg-slate-950/70 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 max-w-lg w-full space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
-              <h3 className="text-base font-bold">Upload Study Material & File</h3>
-              <button onClick={() => setShowMaterialModal(false)} className="text-slate-400 hover:text-white">
+          <div className="bg-[var(--bg-surface)] border border-[var(--border-subtle)] rounded-2xl p-6 max-w-lg w-full space-y-4 shadow-2xl">
+            <div className="flex items-center justify-between border-b border-[var(--border-subtle)] pb-3">
+              <h3 className="text-base font-bold font-display">Upload Study Material & File</h3>
+              <button onClick={() => setShowMaterialModal(false)} className="text-[var(--text-muted)] hover:text-[var(--text-primary)]">
                 <X className="w-5 h-5" />
               </button>
             </div>
@@ -334,22 +411,22 @@ export const TeacherDashboard: React.FC = () => {
 
             <form onSubmit={handleUploadMaterial} className="space-y-4">
               <div>
-                <label className="block text-xs font-semibold mb-1">Resource Title</label>
+                <label className="block text-xs font-semibold mb-1.5 text-[var(--text-primary)]">Resource Title</label>
                 <input
                   type="text"
                   value={matTitle}
                   onChange={(e) => setMatTitle(e.target.value)}
                   required
                   placeholder="e.g. Chapter 4 Lecture Slides PDF"
-                  className="w-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-brand-500"
+                  className="w-full bg-[var(--bg-app)] border border-[var(--border-subtle)] rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#535779]"
                 />
               </div>
               <div>
-                <label className="block text-xs font-semibold mb-1">Resource Type</label>
+                <label className="block text-xs font-semibold mb-1.5 text-[var(--text-primary)]">Resource Type</label>
                 <select
                   value={matType}
                   onChange={(e) => setMatType(e.target.value as any)}
-                  className="w-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-brand-500"
+                  className="w-full bg-[var(--bg-app)] border border-[var(--border-subtle)] rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#535779]"
                 >
                   <option value="DOCUMENT">Document (PDF / DOC / DOCX)</option>
                   <option value="SLIDES">Presentation Slides (PPT / PPTX / PDF)</option>
@@ -360,8 +437,8 @@ export const TeacherDashboard: React.FC = () => {
 
               {/* Interactive File Attachment Picker */}
               <div>
-                <label className="block text-xs font-semibold mb-1">File Attachment (PDF, DOC, PPT, ZIP)</label>
-                <div className="border-2 border-dashed border-slate-300 dark:border-slate-700 rounded-xl p-4 text-center bg-slate-50 dark:bg-slate-800/40 relative hover:border-brand-500 transition-colors">
+                <label className="block text-xs font-semibold mb-1.5 text-[var(--text-primary)]">File Attachment (PDF, DOC, PPT, ZIP)</label>
+                <div className="border-2 border-dashed border-[var(--border-strong)] rounded-xl p-4 text-center bg-[var(--bg-surface-elevated)] relative hover:border-[#535779] transition-colors cursor-pointer">
                   <input
                     type="file"
                     accept=".pdf,.doc,.docx,.ppt,.pptx,.txt,.zip,.tar.gz,.java,.py,.cpp,.mp4"
@@ -369,43 +446,43 @@ export const TeacherDashboard: React.FC = () => {
                     className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
                   />
                   {selectedFile ? (
-                    <div className="flex items-center justify-center space-x-2 text-emerald-500 font-semibold text-xs">
+                    <div className="flex items-center justify-center space-x-2 text-emerald-600 font-semibold text-xs">
                       <FileCheck className="w-5 h-5" />
                       <span>{selectedFile.name} ({formatFileSize(selectedFile.size)})</span>
                     </div>
                   ) : (
                     <div className="space-y-1">
-                      <Upload className="w-6 h-6 text-brand-500 mx-auto" />
-                      <p className="text-xs font-semibold text-slate-700 dark:text-slate-300">Click to choose or drag PDF / DOC file here</p>
-                      <p className="text-[10px] text-slate-400">Supports PDF, DOCX, PPTX, ZIP, Code files (Max 50MB)</p>
+                      <Upload className="w-6 h-6 text-[#535779] mx-auto" />
+                      <p className="text-xs font-semibold text-[var(--text-primary)]">Click to choose or drag file here</p>
+                      <p className="text-[10px] text-[var(--text-muted)]">Supports PDF, DOCX, PPTX, ZIP, Code files (Max 50MB)</p>
                     </div>
                   )}
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs font-semibold mb-1">Resource Description</label>
+                <label className="block text-xs font-semibold mb-1.5 text-[var(--text-primary)]">Resource Description</label>
                 <textarea
                   value={matDesc}
                   onChange={(e) => setMatDesc(e.target.value)}
                   required
                   rows={3}
                   placeholder="Brief description of the material..."
-                  className="w-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-brand-500"
+                  className="w-full bg-[var(--bg-app)] border border-[var(--border-subtle)] rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#535779]"
                 />
               </div>
-              <div className="flex justify-end space-x-2 pt-2">
+              <div className="flex justify-end space-x-3 pt-2">
                 <button
                   type="button"
                   onClick={() => setShowMaterialModal(false)}
-                  className="px-4 py-2 bg-slate-200 dark:bg-slate-800 rounded-xl text-xs font-semibold"
+                  className="btn-ghost"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={matSubmitting}
-                  className="px-4 py-2 bg-brand-600 hover:bg-brand-500 text-white rounded-xl text-xs font-semibold flex items-center space-x-1.5 cursor-pointer"
+                  className="btn-primary"
                 >
                   <Upload className="w-3.5 h-3.5" />
                   <span>{matSubmitting ? 'Uploading...' : 'Upload Resource File'}</span>
@@ -415,6 +492,6 @@ export const TeacherDashboard: React.FC = () => {
           </div>
         </div>
       )}
-    </div>
+    </>
   );
 };

@@ -6,6 +6,7 @@ import com.mentora.dto.RegisterRequest;
 import com.mentora.entity.User;
 import com.mentora.repository.UserRepository;
 import com.mentora.security.JwtUtils;
+import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -52,8 +53,9 @@ public class AuthController {
                 .build());
     }
 
+    // BUG-5 FIX: @Valid activates Jakarta validation constraints defined on RegisterRequest
     @PostMapping("/register")
-    public ResponseEntity<?> registerUser(@RequestBody RegisterRequest registerRequest) {
+    public ResponseEntity<?> registerUser(@Valid @RequestBody RegisterRequest registerRequest) {
         if (userRepository.existsByEmail(registerRequest.getEmail())) {
             return ResponseEntity.badRequest().body("Error: Email is already in use!");
         }
