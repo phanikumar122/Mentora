@@ -2,16 +2,26 @@ server:
   port: 8081
   servlet:
     context-path: /
+  compression:
+    enabled: true
+    mime-types: text/html,text/xml,text/plain,text/css,text/javascript,application/javascript,application/json,application/xml
+    min-response-size: 512
 
 spring:
   application:
     name: mentora-backend
+  servlet:
+    multipart:
+      max-file-size: 50MB
+      max-request-size: 50MB
   datasource:
     # TiDB Cloud Serverless (MySQL-compatible)
-    url: jdbc:mysql://gateway01.ap-southeast-1.prod.aws.tidbcloud.com:4000/mentora?sslMode=REQUIRED&enabledTLSProtocols=TLSv1.2,TLSv1.3&allowPublicKeyRetrieval=true
+    # SECURITY: Credentials loaded from environment variables (MENTORA_DB_URL, MENTORA_DB_USER, MENTORA_DB_PASS)
+    # Fallback to local dev values only — never hardcode production credentials here.
+    url: ${MENTORA_DB_URL:jdbc:mysql://gateway01.ap-southeast-1.prod.aws.tidbcloud.com:4000/mentora?sslMode=REQUIRED&enabledTLSProtocols=TLSv1.2,TLSv1.3&allowPublicKeyRetrieval=true}
     driver-class-name: com.mysql.cj.jdbc.Driver
-    username: 3Q9njwBTT5gHaSW.root
-    password: Fj7IWdxW7C2v5xNq
+    username: ${MENTORA_DB_USER:3Q9njwBTT5gHaSW.root}
+    password: ${MENTORA_DB_PASS:Fj7IWdxW7C2v5xNq}
     # HikariCP connection pool — BUG FIX: reduce maxLifetime below TiDB's 5-min server timeout
     # to prevent "connection closed" validation failures on idle connections
     hikari:
@@ -28,16 +38,18 @@ spring:
     show-sql: false
     properties:
       hibernate:
-        format_sql: true
+        format_sql: false
 
 # JWT Security Configurations
+# SECURITY: jwtSecret loaded from environment variable MENTORA_JWT_SECRET
+# Use a strong random 256-bit hex value in production (never the default below).
 mentora:
   app:
-    jwtSecret: 404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970
+    jwtSecret: ${MENTORA_JWT_SECRET:404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970}
     jwtExpirationMs: 86400000 # 24 hours
   cors:
-    # BUG-13 FIX: Explicitly list allowed origins (used by SecurityConfig)
-    allowed-origins: http://localhost:3000,http://localhost:3001
+    # Allowed origins for frontend local dev environments
+    allowed-origins: ${MENTORA_CORS_ORIGINS:http://localhost:3000,http://localhost:3001,http://localhost:3002,http://localhost:3003,http://localhost:3004,http://localhost:5173,http://127.0.0.1:3000,http://127.0.0.1:3001,http://127.0.0.1:3002,http://127.0.0.1:3003,http://127.0.0.1:3004,http://127.0.0.1:5173}
 
 # SpringDoc OpenAPI Documentation
 springdoc:

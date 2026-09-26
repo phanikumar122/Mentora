@@ -29,6 +29,9 @@ Thumbs.db
 # Database files
 *.db
 
+# Backend file uploads (user-uploaded files should not be committed)
+mentora-backend/uploads/
+
 # Skills Artifacts
 Skills-Artifacts/
 Skills-Artifact/

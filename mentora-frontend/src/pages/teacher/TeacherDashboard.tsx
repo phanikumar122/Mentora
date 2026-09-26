@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import api, { getApiErrorMessage } from '../../services/api';
+import { addAuditLog } from '../../services/auditService';
 import {
   Users,
   FileText,
@@ -64,18 +65,17 @@ export const TeacherDashboard: React.FC = () => {
   const fetchDashboardData = useCallback(async () => {
     try {
       setLoading(true);
-      const [subsRes, assRes, usersRes, advRes] = await Promise.all([
+      const [subsRes, assRes, advRes] = await Promise.all([
         api.get('/subjects').catch(() => ({ data: [] })),
         api.get('/assignments').catch(() => ({ data: [] })),
-        api.get('/users').catch(() => ({ data: [] })),
         api.get('/users/teachers/my-students').catch(() => ({ data: [] })),
       ]);
 
       setSubjects(subsRes.data || []);
       setAssignments(assRes.data || []);
-      const studentsCount = (usersRes.data || []).filter((u: any) => u.role === 'ROLE_STUDENT').length;
-      setTotalStudents(studentsCount);
-      setMyAdvisees(advRes.data || []);
+      const advisees = advRes.data || [];
+      setMyAdvisees(advisees);
+      setTotalStudents(advisees.length);
     } catch (err) {
       console.error('Error loading teacher dashboard data:', err);
     } finally {
@@ -108,6 +108,11 @@ export const TeacherDashboard: React.FC = () => {
         maxMarks: assignMaxMarks,
         dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
       });
+      addAuditLog({
+        action: 'Coursework Published',
+        detail: `Faculty created new assignment "${assignTitle}" (${assignMaxMarks} marks)`,
+        type: 'INFO',
+      });
       setAssignTitle('');
       setAssignDesc('');
       setShowAssignmentModal(false);
@@ -124,20 +129,38 @@ export const TeacherDashboard: React.FC = () => {
     e.preventDefault();
     if (!matTitle.trim()) return;
 
-    const fName = selectedFile ? selectedFile.name : `${matTitle.replace(/\s+/g, '_')}.pdf`;
-    const fSize = selectedFile ? formatFileSize(selectedFile.size) : '2.1 MB';
-
     try {
       setMatSubmitting(true);
       setMatError(null);
-      await api.post('/materials', {
-        title: matTitle,
-        description: matDesc,
-        materialType: matType,
-        fileName: fName,
-        fileSize: fSize,
-        fileUrl: `/uploads/${fName}`,
+
+      if (selectedFile) {
+        const formData = new FormData();
+        formData.append('title', matTitle);
+        formData.append('description', matDesc || '');
+        formData.append('materialType', matType);
+        formData.append('file', selectedFile);
+
+        await api.post('/materials/upload', formData, {
+          headers: { 'Content-Type': 'multipart/form-data' },
+        });
+      } else {
+        const fName = `${matTitle.replace(/\s+/g, '_')}.pdf`;
+        await api.post('/materials', {
+          title: matTitle,
+          description: matDesc,
+          materialType: matType,
+          fileName: fName,
+          fileSize: '1.0 MB',
+          fileUrl: `/uploads/${fName}`,
+        });
+      }
+
+      addAuditLog({
+        action: 'Study Material Uploaded',
+        detail: `Faculty published resource "${matTitle}" (${matType})`,
+        type: 'INFO',
       });
+
       setMatTitle('');
       setMatDesc('');
       setSelectedFile(null);
@@ -155,14 +178,8 @@ export const TeacherDashboard: React.FC = () => {
     <>
       {/* Faculty Hero Command Banner */}
       <div className="hero-banner">
-        <div className="absolute right-0 top-0 w-80 h-80 bg-brand-600/15 rounded-full blur-3xl pointer-events-none" />
-
         <div className="hero-banner-inner">
           <div className="space-y-1">
-            <span className="hero-eyebrow border-indigo-500/30 text-indigo-300 mb-3">
-              <Sparkles className="w-3.5 h-3.5" />
-              <span>Faculty Professor Portal</span>
-            </span>
             <h2 className="hero-title">
               Welcome, {user?.firstName ? `Prof. ${user.firstName} ${user.lastName}` : 'Faculty Member'}
             </h2>
@@ -181,7 +198,7 @@ export const TeacherDashboard: React.FC = () => {
             </button>
             <button
               onClick={() => { setShowMaterialModal(true); setMatError(null); }}
-              className="btn-ghost text-white border-white/20 hover:bg-white/10 hover:text-white"
+              className="btn-ghost"
             >
               <Upload className="w-4 h-4" />
               <span>Upload Material</span>
@@ -192,15 +209,15 @@ export const TeacherDashboard: React.FC = () => {
 
       {/* Dynamic Overview Cards */}
       <div className="metrics-grid">
-        <div className="metric-card cursor-pointer" onClick={() => navigate('/admin/users')}>
-          <div className="metric-icon bg-indigo-50 text-indigo-600 border border-indigo-100 dark:bg-indigo-500/10 dark:text-indigo-500 dark:border-indigo-500/20">
+        <div className="metric-card cursor-pointer" onClick={() => navigate('/attendance')}>
+          <div className="metric-icon bg-indigo-50 text-indigo-600 border border-indigo-100">
             <Users className="w-6 h-6" />
           </div>
           <div>
-            <p className="metric-label">Department Enrolled</p>
-            <p className="metric-value">{totalStudents}</p>
-            <span className="metric-sub text-indigo-600 dark:text-indigo-500">
-              Active registered students
+            <p className="metric-label">Assigned Scholars</p>
+            <p className="metric-value">{myAdvisees.length}</p>
+            <span className="metric-sub text-indigo-600">
+              Assigned advisees & attendance
             </span>
           </div>
         </div>

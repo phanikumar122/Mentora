@@ -1,9 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import {
   LayoutDashboard,
-  BookOpen,
   FileCheck,
   CalendarCheck,
   MessageSquare,
@@ -13,15 +12,9 @@ import {
   Users,
   Building2,
   Award,
-  HeartHandshake,
   ChevronLeft,
   ChevronRight,
-  Sparkles,
-  Shield,
-  GraduationCap,
-  School,
   Compass,
-  Layers,
   X,
 } from 'lucide-react';
 
@@ -37,7 +30,6 @@ interface NavItem {
   label: string;
   icon: React.ComponentType<{ className?: string }>;
   badge?: string | number;
-  category?: string;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -50,7 +42,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const location = useLocation();
   const role = user?.role || 'ROLE_STUDENT';
 
-  // Internal collapse state if not fully controlled from parent
   const [internalCollapsed, setInternalCollapsed] = useState<boolean>(() => {
     const saved = localStorage.getItem('mentora_sidebar_collapsed');
     return saved === 'true';
@@ -159,47 +150,43 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
   const sidebarContent = (
     <aside
-      className={`h-[calc(100vh-5rem)] my-2 ml-3 flex flex-col justify-between rounded-2xl transition-all duration-300 ease-in-out floating-sidebar-glass ${
-        isCollapsed ? 'w-[74px] p-2.5' : 'w-[260px] p-4'
+      className={`h-full bg-white border-r border-slate-200/90 flex flex-col justify-between transition-all duration-200 ${
+        isCollapsed ? 'w-16 p-2.5' : 'w-64 p-4'
       }`}
     >
-      {/* Top Groupings & Nav links */}
-      <div className="space-y-6 overflow-y-auto pr-1">
-        {/* Collapse toggle row (Desktop only) */}
+      <div className="space-y-5 overflow-y-auto pr-0.5">
+        {/* Workspace Title & Collapse Toggle */}
         <div className={`hidden md:flex items-center ${isCollapsed ? 'justify-center' : 'justify-between'} px-1`}>
           {!isCollapsed && (
-            <span className="text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest flex items-center space-x-1.5">
-              <Compass className="w-3.5 h-3.5" />
+            <span className="text-[11px] font-bold text-slate-400 uppercase tracking-widest flex items-center space-x-1.5">
+              <Compass className="w-3.5 h-3.5 text-emerald-600" />
               <span>Workspace</span>
             </span>
           )}
           <button
             onClick={toggleCollapse}
-            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
             title={isCollapsed ? 'Expand Sidebar' : 'Collapse Sidebar'}
           >
             {isCollapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
           </button>
         </div>
 
-        {/* Mobile close button */}
+        {/* Mobile Header Close */}
         <div className="flex md:hidden items-center justify-between px-1 mb-2">
-          <span className="text-xs font-bold text-slate-400 uppercase">Navigation</span>
+          <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Navigation</span>
           {onClose && (
-            <button
-              onClick={onClose}
-              className="p-1 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800"
-            >
+            <button onClick={onClose} className="p-1 text-slate-400 hover:text-slate-700 cursor-pointer">
               <X className="w-5 h-5" />
             </button>
           )}
         </div>
 
-        {/* Render Link Groups */}
+        {/* Navigation Categories & Items */}
         {linkGroups.map((group, gIdx) => (
           <div key={gIdx} className="space-y-1">
             {!isCollapsed && (
-              <p className="px-3 text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1.5">
+              <p className="px-3 text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">
                 {group.category}
               </p>
             )}
@@ -214,22 +201,19 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   onClick={onClose}
                   title={isCollapsed ? link.label : undefined}
                   className={`group relative flex items-center ${
-                    isCollapsed ? 'justify-center px-0 py-3' : 'space-x-3 px-3.5 py-2.5'
-                  } rounded-xl font-semibold text-xs transition-all duration-150 ${
+                    isCollapsed ? 'justify-center px-0 py-2.5' : 'space-x-3 px-3 py-2.5'
+                  } rounded-xl font-semibold text-xs transition-all ${
                     isActive
-                      ? 'bg-brand-600 text-white shadow-md shadow-brand-500/25 dark:shadow-brand-500/15'
-                      : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/70 hover:text-slate-900 dark:hover:text-slate-100'
+                      ? 'bg-emerald-600 text-white shadow-sm shadow-emerald-600/20'
+                      : 'text-slate-600 hover:bg-emerald-50/80 hover:text-emerald-700'
                   }`}
                 >
-                  <Icon className={`w-4 h-4 shrink-0 ${isActive ? 'text-white' : 'text-slate-500 group-hover:text-brand-500'}`} />
+                  <Icon className={`w-4 h-4 shrink-0 ${isActive ? 'text-white' : 'text-slate-400 group-hover:text-emerald-600'}`} />
 
-                  {!isCollapsed && (
-                    <span className="truncate">{link.label}</span>
-                  )}
+                  {!isCollapsed && <span className="truncate">{link.label}</span>}
 
-                  {/* Tooltip for collapsed mode */}
                   {isCollapsed && (
-                    <div className="absolute left-full ml-3 px-2.5 py-1 bg-slate-900 text-white text-[11px] font-semibold rounded-lg shadow-xl opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity z-50 whitespace-nowrap border border-slate-800">
+                    <div className="absolute left-full ml-3 px-2.5 py-1 bg-slate-900 text-white text-[11px] font-semibold rounded-md shadow-lg opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity z-50 whitespace-nowrap">
                       {link.label}
                     </div>
                   )}
@@ -240,44 +224,21 @@ export const Sidebar: React.FC<SidebarProps> = ({
         ))}
       </div>
 
-      {/* Institutional Status Footer */}
-      <div className="pt-3 border-t border-slate-200/60 dark:border-slate-800/60">
-        {!isCollapsed ? (
-          <div className="p-3 rounded-xl bg-space-indigo-50/70 dark:bg-space-indigo-950/60 border border-space-indigo-100 dark:border-space-indigo-800/60 flex items-center space-x-3">
-            <div className="w-8 h-8 rounded-lg bg-space-indigo-600 text-white flex items-center justify-center font-bold text-xs shadow-sm">
-              <School className="w-4 h-4" />
-            </div>
-            <div className="overflow-hidden">
-              <p className="text-xs font-bold text-slate-900 dark:text-white truncate">Mentora Portal</p>
-              <div className="flex items-center space-x-1.5 mt-0.5">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                <p className="text-[10px] text-slate-500 dark:text-slate-400 font-medium">Verified Active</p>
-              </div>
-            </div>
-          </div>
-        ) : (
-          <div className="flex justify-center" title="Mentora System Active">
-            <div className="w-8 h-8 rounded-lg bg-brand-500/10 text-brand-500 flex items-center justify-center">
-              <Sparkles className="w-4 h-4" />
-            </div>
-          </div>
-        )}
-      </div>
     </aside>
   );
 
   return (
     <>
-      {/* Desktop floating sidebar */}
-      <div className="hidden md:flex h-full sticky top-16 z-20">
+      {/* Desktop Sidebar */}
+      <div className="hidden md:flex h-full shrink-0 z-20">
         {sidebarContent}
       </div>
 
-      {/* Mobile drawer */}
+      {/* Mobile Drawer */}
       {isOpen && (
         <div className="fixed inset-0 z-50 md:hidden flex">
-          <div className="fixed inset-0 bg-slate-950/70 backdrop-blur-sm" onClick={onClose} />
-          <div className="relative z-50 h-full w-[270px]">
+          <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs" onClick={onClose} />
+          <div className="relative z-50 h-full w-64">
             {sidebarContent}
           </div>
         </div>
@@ -285,4 +246,3 @@ export const Sidebar: React.FC<SidebarProps> = ({
     </>
   );
 };
-

@@ -83,6 +83,7 @@ public class AcademicController {
     }
 
     @DeleteMapping("/courses/{id}")
+    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
     public ResponseEntity<?> deleteCourse(@PathVariable Long id) {
         try {
             // FIXED MAJOR-3: Clean up Attendance FK references before deleting course

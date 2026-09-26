@@ -6,14 +6,13 @@ import com.mentora.entity.Role;
 import com.mentora.entity.Student;
 import com.mentora.entity.Teacher;
 import com.mentora.entity.User;
-import com.mentora.repository.AttendanceRepository;
-import com.mentora.repository.ParentRepository;
-import com.mentora.repository.StudentRepository;
-import com.mentora.repository.TeacherRepository;
-import com.mentora.repository.UserRepository;
+import com.mentora.repository.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.*;
@@ -23,22 +22,51 @@ import java.util.stream.Collectors;
 @RequestMapping("/api/v1/users")
 public class UserController {
 
+    private static final Logger log = LoggerFactory.getLogger(UserController.class);
+
     private final UserRepository userRepository;
     private final StudentRepository studentRepository;
     private final TeacherRepository teacherRepository;
     private final ParentRepository parentRepository;
     private final AttendanceRepository attendanceRepository;
+    private final AssignmentSubmissionRepository assignmentSubmissionRepository;
+    private final StudyMaterialRepository studyMaterialRepository;
+    private final SubjectRepository subjectRepository;
+    private final AssignmentRepository assignmentRepository;
+    private final TimetableRepository timetableRepository;
+    private final ChatMessageRepository chatMessageRepository;
+    private final DiscussionPostRepository discussionPostRepository;
+    private final DiscussionReplyRepository discussionReplyRepository;
+    private final AnnouncementRepository announcementRepository;
 
     public UserController(UserRepository userRepository,
                           StudentRepository studentRepository,
                           TeacherRepository teacherRepository,
                           ParentRepository parentRepository,
-                          AttendanceRepository attendanceRepository) {
+                          AttendanceRepository attendanceRepository,
+                          AssignmentSubmissionRepository assignmentSubmissionRepository,
+                          StudyMaterialRepository studyMaterialRepository,
+                          SubjectRepository subjectRepository,
+                          AssignmentRepository assignmentRepository,
+                          TimetableRepository timetableRepository,
+                          ChatMessageRepository chatMessageRepository,
+                          DiscussionPostRepository discussionPostRepository,
+                          DiscussionReplyRepository discussionReplyRepository,
+                          AnnouncementRepository announcementRepository) {
         this.userRepository = userRepository;
         this.studentRepository = studentRepository;
         this.teacherRepository = teacherRepository;
         this.parentRepository = parentRepository;
         this.attendanceRepository = attendanceRepository;
+        this.assignmentSubmissionRepository = assignmentSubmissionRepository;
+        this.studyMaterialRepository = studyMaterialRepository;
+        this.subjectRepository = subjectRepository;
+        this.assignmentRepository = assignmentRepository;
+        this.timetableRepository = timetableRepository;
+        this.chatMessageRepository = chatMessageRepository;
+        this.discussionPostRepository = discussionPostRepository;
+        this.discussionReplyRepository = discussionReplyRepository;
+        this.announcementRepository = announcementRepository;
     }
 
     @GetMapping("/me")
@@ -56,7 +84,69 @@ public class UserController {
                 .build());
     }
 
+    @GetMapping("/directory")
+    public ResponseEntity<List<Map<String, Object>>> getDirectoryUsers(Authentication authentication) {
+        if (authentication == null) return ResponseEntity.badRequest().build();
+        User currentUser = userRepository.findByEmail(authentication.getName()).orElse(null);
+        if (currentUser == null) return ResponseEntity.badRequest().build();
+
+        // If current user is a Teacher / Mentor, retrieve only their assigned advisee user IDs
+        Set<String> assignedStudentUserIds = new HashSet<>();
+        if (currentUser.getRole() == Role.ROLE_TEACHER) {
+            List<Student> advisees = studentRepository.findByAdvisorUserId(currentUser.getId());
+            for (Student s : advisees) {
+                if (s.getUser() != null) {
+                    assignedStudentUserIds.add(s.getUser().getId());
+                }
+            }
+        }
+
+        List<User> users = userRepository.findAll();
+        List<Map<String, Object>> result = new ArrayList<>();
+
+        for (User u : users) {
+            if (u.getId().equals(currentUser.getId())) continue;
+
+            // Mentor / Teacher: gets ONLY their assigned students, all Admins, and all other Mentors
+            if (currentUser.getRole() == Role.ROLE_TEACHER) {
+                boolean isAdmin = u.getRole() == Role.ROLE_ADMIN;
+                boolean isOtherMentor = u.getRole() == Role.ROLE_TEACHER;
+                boolean isAssignedStudent = u.getRole() == Role.ROLE_STUDENT && assignedStudentUserIds.contains(u.getId());
+                if (!isAdmin && !isOtherMentor && !isAssignedStudent) {
+                    continue;
+                }
+            }
+
+            // Student role: can only see Teachers and Admins
+            if (currentUser.getRole() == Role.ROLE_STUDENT) {
+                if (u.getRole() != Role.ROLE_TEACHER && u.getRole() != Role.ROLE_ADMIN) {
+                    continue;
+                }
+            }
+
+            // Parent role: can only see Teachers and Admins
+            if (currentUser.getRole() == Role.ROLE_PARENT) {
+                if (u.getRole() != Role.ROLE_TEACHER && u.getRole() != Role.ROLE_ADMIN) {
+                    continue;
+                }
+            }
+
+            Map<String, Object> map = new HashMap<>();
+            map.put("id", u.getId());
+            map.put("email", u.getEmail());
+            map.put("firstName", u.getFirstName());
+            map.put("lastName", u.getLastName());
+            map.put("role", u.getRole());
+            map.put("phoneNumber", u.getPhoneNumber());
+            map.put("profilePictureUrl", u.getProfilePictureUrl());
+            result.add(map);
+        }
+
+        return ResponseEntity.ok(result);
+    }
+
     @GetMapping
+    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
     public ResponseEntity<List<Map<String, Object>>> getAllUsers() {
         List<User> users = userRepository.findAll();
         List<Student> allStudents = studentRepository.findAll();
@@ -164,14 +254,17 @@ public class UserController {
         List<Map<String, Object>> result = new ArrayList<>();
         for (Student s : advisees) {
             if (s.getUser() != null) {
-                result.add(Map.of(
-                        "studentUserId", s.getUser().getId(),
-                        "name", s.getUser().getFirstName() + " " + s.getUser().getLastName(),
-                        "email", s.getUser().getEmail(),
-                        "rollNumber", s.getRollNumber() != null ? s.getRollNumber() : "N/A",
-                        "semester", s.getSemester() != null ? s.getSemester() : 1,
-                        "cgpa", s.getCgpa() != null ? s.getCgpa() : 0.0
-                ));
+                Map<String, Object> map = new HashMap<>();
+                map.put("id", s.getUser().getId());
+                map.put("studentUserId", s.getUser().getId());
+                map.put("firstName", s.getUser().getFirstName());
+                map.put("lastName", s.getUser().getLastName());
+                map.put("name", s.getUser().getFirstName() + " " + s.getUser().getLastName());
+                map.put("email", s.getUser().getEmail());
+                map.put("rollNumber", s.getRollNumber() != null ? s.getRollNumber() : "N/A");
+                map.put("semester", s.getSemester() != null ? s.getSemester() : 1);
+                map.put("cgpa", s.getCgpa() != null ? s.getCgpa() : 0.0);
+                result.add(map);
             }
         }
         return ResponseEntity.ok(result);
@@ -290,17 +383,102 @@ public class UserController {
 
     @DeleteMapping("/{id}")
     @PreAuthorize("hasAuthority('ROLE_ADMIN')")
+    @Transactional
     public ResponseEntity<?> deleteUser(@PathVariable String id) {
         try {
+            // 1. Unlink Parent records referencing this user as student ward
+            parentRepository.findAll().forEach(p -> {
+                if (p.getStudentWard() != null && id.equals(p.getStudentWard().getId())) {
+                    p.setStudentWard(null);
+                    parentRepository.save(p);
+                }
+            });
+
+            // 2. Handle Student entity & dependent records
             studentRepository.findByUserId(id).ifPresent(student -> {
-                attendanceRepository.deleteByStudentId(student.getId());
+                try {
+                    assignmentSubmissionRepository.deleteByStudentId(student.getId());
+                } catch (Exception ex) {
+                    log.warn("Error cleaning up assignment submissions for student {}: {}", student.getId(), ex.getMessage());
+                }
+                try {
+                    attendanceRepository.deleteByStudentId(student.getId());
+                } catch (Exception ex) {
+                    log.warn("Error cleaning up attendance for student {}: {}", student.getId(), ex.getMessage());
+                }
                 studentRepository.delete(student);
             });
-            teacherRepository.findByUserId(id).ifPresent(teacherRepository::delete);
+
+            // 3. Handle Teacher entity & dependent records
+            teacherRepository.findByUserId(id).ifPresent(teacher -> {
+                // Unlink advisees
+                studentRepository.findByAdvisorId(teacher.getId()).forEach(s -> {
+                    s.setAdvisor(null);
+                    studentRepository.save(s);
+                });
+                // Unlink study materials
+                studyMaterialRepository.findByTeacherId(teacher.getId()).forEach(sm -> {
+                    sm.setTeacher(null);
+                    studyMaterialRepository.save(sm);
+                });
+                // Unlink subjects
+                subjectRepository.findByTeacherId(teacher.getId()).forEach(sub -> {
+                    sub.setTeacher(null);
+                    subjectRepository.save(sub);
+                });
+                // Unlink assignments
+                assignmentRepository.findByTeacherId(teacher.getId()).forEach(as -> {
+                    as.setTeacher(null);
+                    assignmentRepository.save(as);
+                });
+                // Unlink timetables
+                timetableRepository.findByTeacherId(teacher.getId()).forEach(tt -> {
+                    tt.setTeacher(null);
+                    timetableRepository.save(tt);
+                });
+                // Unlink attendance records marked by teacher
+                attendanceRepository.findByTeacherId(teacher.getId()).forEach(att -> {
+                    att.setTeacher(null);
+                    attendanceRepository.save(att);
+                });
+                teacherRepository.delete(teacher);
+            });
+
+            // 4. Handle Parent entity
             parentRepository.findByUserId(id).ifPresent(parentRepository::delete);
+
+            // 5. Clean up chat messages
+            chatMessageRepository.findAll().forEach(m -> {
+                if ((m.getSender() != null && id.equals(m.getSender().getId())) ||
+                    (m.getRecipient() != null && id.equals(m.getRecipient().getId()))) {
+                    chatMessageRepository.delete(m);
+                }
+            });
+
+            // 6. Clean up discussion posts & replies
+            discussionReplyRepository.findAll().forEach(r -> {
+                if (r.getAuthor() != null && id.equals(r.getAuthor().getId())) {
+                    discussionReplyRepository.delete(r);
+                }
+            });
+            discussionPostRepository.findAll().forEach(p -> {
+                if (p.getAuthor() != null && id.equals(p.getAuthor().getId())) {
+                    discussionPostRepository.delete(p);
+                }
+            });
+
+            // 7. Clean up announcements authored by this user
+            announcementRepository.findAll().forEach(a -> {
+                if (a.getAuthor() != null && id.equals(a.getAuthor().getId())) {
+                    announcementRepository.delete(a);
+                }
+            });
+
+            // 8. Delete user record
             userRepository.deleteById(id);
             return ResponseEntity.ok(Map.of("message", "User deleted successfully!"));
         } catch (Exception e) {
+            log.error("Failed to delete user with id {}", id, e);
             return ResponseEntity.badRequest().body(Map.of("message", "Failed to delete user: " + e.getMessage()));
         }
     }

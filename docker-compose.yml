@@ -1,0 +1,36 @@
+version: '3.8'
+
+services:
+  mentora-backend:
+    build:
+      context: ./mentora-backend
+      dockerfile: Dockerfile
+    container_name: mentora-backend
+    restart: unless-stopped
+    ports:
+      - "8081:8081"
+    environment:
+      - MENTORA_DB_URL=${MENTORA_DB_URL:-jdbc:mysql://gateway01.ap-southeast-1.prod.aws.tidbcloud.com:4000/mentora?sslMode=REQUIRED&enabledTLSProtocols=TLSv1.2,TLSv1.3&allowPublicKeyRetrieval=true}
+      - MENTORA_DB_USER=${MENTORA_DB_USER:-3Q9njwBTT5gHaSW.root}
+      - MENTORA_DB_PASS=${MENTORA_DB_PASS:-Fj7IWdxW7C2v5xNq}
+      - MENTORA_JWT_SECRET=${MENTORA_JWT_SECRET:-404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970}
+      - MENTORA_CORS_ORIGINS=${MENTORA_CORS_ORIGINS:-http://localhost:3000,http://localhost:80}
+    volumes:
+      - mentora_uploads:/app/uploads
+
+  mentora-frontend:
+    build:
+      context: ./mentora-frontend
+      dockerfile: Dockerfile
+      args:
+        - VITE_API_URL=${VITE_API_URL:-http://localhost:8081/api/v1}
+    container_name: mentora-frontend
+    restart: unless-stopped
+    ports:
+      - "3000:80"
+    depends_on:
+      - mentora-backend
+
+volumes:
+  mentora_uploads:
+    driver: local

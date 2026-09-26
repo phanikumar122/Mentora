@@ -6,27 +6,18 @@ export const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ child
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
 
   return (
-    <div className="min-h-screen flex flex-col bg-[var(--bg-app)] transition-colors duration-200">
-      {/* Sticky Navbar — fixed 64px tall */}
+    <div className="min-h-screen flex flex-col bg-[#f8fafc]">
+      {/* Fixed Top Navbar (h-16 / 64px) */}
       <Navbar onToggleSidebar={() => setMobileSidebarOpen((prev) => !prev)} />
 
-      {/* Body row: sidebar + scrollable main */}
-      <div className="flex flex-1 overflow-hidden" style={{ marginTop: '64px' }}>
-        {/* Desktop floating sidebar (sticky, not scroll-dependent) */}
+      {/* Main Content Area below Navbar */}
+      <div className="flex flex-1 pt-16 h-screen max-w-full overflow-hidden">
+        {/* Sidebar */}
         <Sidebar isOpen={mobileSidebarOpen} onClose={() => setMobileSidebarOpen(false)} />
 
-        {/* Scrollable page content */}
-        <main className="flex-1 overflow-y-auto min-w-0">
-          {/* Inner content wrapper: fluid, consistent padding */}
-          <div
-            className="w-full"
-            style={{
-              padding: 'var(--page-padding-y) var(--page-padding-x)',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: 'var(--section-gap)',
-            }}
-          >
+        {/* Scrollable Page Main Body */}
+        <main className="flex-1 overflow-y-auto overflow-x-hidden min-w-0 max-w-full bg-[#f8fafc]">
+          <div className="w-full max-w-[1360px] mx-auto p-3.5 sm:p-6 md:p-8 space-y-5">
             {children}
           </div>
         </main>

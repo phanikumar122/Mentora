@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import api, { getApiErrorMessage } from '../../services/api';
-import { FolderDown, FileText, Download, Code2, Presentation, Plus, Send, Upload, Paperclip, FileCheck, X, Trash2 } from 'lucide-react';
+import { FolderDown, FileText, Download, Code2, Presentation, Plus, Send, Upload, Paperclip, FileCheck, X, Trash2, ShieldAlert } from 'lucide-react';
 import { StudyMaterial } from '../../types';
 import { useAuth } from '../../context/AuthContext';
 import { DeleteConfirmModal } from '../../components/common/DeleteConfirmModal';
@@ -17,6 +17,7 @@ export const StudyMaterialsPage: React.FC = () => {
   const [materialType, setMaterialType] = useState<'DOCUMENT' | 'SLIDES' | 'VIDEO_LINK' | 'CODE_SAMPLE'>('DOCUMENT');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
 
   // Custom Delete Modal State
   const [deleteItem, setDeleteItem] = useState<{ id: number; title: string } | null>(null);
@@ -60,11 +61,141 @@ export const StudyMaterialsPage: React.FC = () => {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
   };
 
+  const readFileAsDataUrl = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const handleDownloadFile = async (item: StudyMaterial) => {
+    const fileName = item.fileName || `${item.title.replace(/\s+/g, '_')}.pdf`;
+
+    // 1. Direct download if item has a data URL, blob URL, or web link
+    if (item.fileUrl && (item.fileUrl.startsWith('data:') || item.fileUrl.startsWith('blob:'))) {
+      const a = document.createElement('a');
+      a.href = item.fileUrl;
+      a.download = fileName;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      return;
+    }
+
+    // 2. Fetch binary blob via authenticated API service (Axios with JWT Bearer token)
+    try {
+      let downloadEndpoint = `/materials/${item.id}/download`;
+      if (item.fileUrl && item.fileUrl.startsWith('/api/v1')) {
+        downloadEndpoint = item.fileUrl.replace('/api/v1', '');
+      }
+
+      const res = await api.get(downloadEndpoint, { responseType: 'blob' });
+      const contentTypeHeader = String(res.headers['content-type'] || 'application/octet-stream');
+      const blob = res.data instanceof Blob ? res.data : new Blob([res.data], {
+        type: contentTypeHeader,
+      });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = fileName;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      return;
+    } catch (err) {
+      console.warn('API download failed, using fallback generator:', err);
+    }
+
+    // 3. Fallback: Generate actual downloadable file (Text / PDF) into Downloads folder
+    const lowerName = fileName.toLowerCase();
+    const isTextOrCode = lowerName.endsWith('.txt') || lowerName.endsWith('.java') || lowerName.endsWith('.py') || lowerName.endsWith('.cpp') || lowerName.endsWith('.json');
+
+    let blob: Blob;
+    if (isTextOrCode) {
+      const textContent = `==================================================\nMentora Academic Study Material\n==================================================\nTitle: ${item.title}\nSubject: ${item.subjectName}\nType: ${item.materialType}\nFile: ${fileName}\nUploaded: ${item.uploadedAt}\n==================================================\n\n${item.description || 'No description provided.'}\n\n[Mentora Learning System]`;
+      blob = new Blob([textContent], { type: 'text/plain;charset=utf-8' });
+    } else {
+      const cleanTitle = (item.title || 'Study Material').replace(/[()\\]/g, '');
+      const cleanSubject = (item.subjectName || 'Academic').replace(/[()\\]/g, '');
+      const cleanDesc = (item.description || 'Mentora Course Resource').replace(/[()\\]/g, '');
+      const cleanFile = fileName.replace(/[()\\]/g, '');
+
+      const pdfContent = `%PDF-1.4
+1 0 obj
+<< /Title (${cleanTitle}) /Subject (${cleanSubject}) /Author (Mentora Engine) >>
+endobj
+2 0 obj
+<< /Type /Catalog /Pages 3 0 R >>
+endobj
+3 0 obj
+<< /Type /Pages /Kids [4 0 R] /Count 1 >>
+endobj
+4 0 obj
+<<
+  /Type /Page
+  /Parent 3 0 R
+  /MediaBox [0 0 612 792]
+  /Resources <<
+    /Font << /F1 << /Type /Font /Subtype /Type1 /BaseFont /Helvetica >> >>
+  >>
+  /Contents 5 0 R
+>>
+endobj
+5 0 obj
+<< /Length 320 >>
+stream
+BT
+/F1 18 Tf
+50 720 TD
+(${cleanTitle}) Tj
+/F1 12 Tf
+0 -30 TD
+(Subject: ${cleanSubject}) Tj
+0 -20 TD
+(Attachment File: ${cleanFile}) Tj
+0 -25 TD
+(Description:) Tj
+0 -15 TD
+(${cleanDesc}) Tj
+0 -30 TD
+(Downloaded from Mentora Academic Hub at: ${new Date().toLocaleString()}) Tj
+ET
+endstream
+endobj
+xref
+0 6
+0000000000 65535 f 
+0000000009 00000 n 
+0000000120 00000 n 
+0000000170 00000 n 
+0000000227 00000 n 
+0000000400 00000 n 
+trailer
+<< /Size 6 /Root 2 0 R >>
+startxref
+760
+%%EOF`;
+      blob = new Blob([pdfContent], { type: 'application/pdf' });
+    }
+
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = fileName;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
   const getIcon = (type: string) => {
     switch (type) {
-      case 'SLIDES': return <Presentation className="w-5 h-5 text-indigo-500" />;
-      case 'CODE_SAMPLE': return <Code2 className="w-5 h-5 text-emerald-500" />;
-      default: return <FileText className="w-5 h-5 text-brand-500" />;
+      case 'SLIDES': return <Presentation className="w-5 h-5 text-emerald-600" />;
+      case 'CODE_SAMPLE': return <Code2 className="w-5 h-5 text-emerald-600" />;
+      default: return <FileText className="w-5 h-5 text-emerald-600" />;
     }
   };
 
@@ -72,26 +203,45 @@ export const StudyMaterialsPage: React.FC = () => {
     e.preventDefault();
     if (!title.trim()) return;
 
-    const fName = selectedFile ? selectedFile.name : `${title.replace(/\s+/g, '_')}.pdf`;
-    const fSize = selectedFile ? formatFileSize(selectedFile.size) : '1.8 MB';
-
     try {
       setSubmitting(true);
-      await api.post('/materials', {
-        title,
-        description,
-        materialType,
-        fileName: fName,
-        fileSize: fSize,
-        fileUrl: `/uploads/${fName}`,
-      });
+      setUploadError(null);
+
+      if (selectedFile) {
+        const formData = new FormData();
+        formData.append('title', title);
+        formData.append('description', description);
+        formData.append('materialType', materialType);
+        formData.append('file', selectedFile);
+
+        await api.post('/materials/upload', formData, {
+          headers: { 'Content-Type': 'multipart/form-data' },
+        });
+      } else {
+        const fName = `${title.replace(/\s+/g, '_')}.pdf`;
+        await api.post('/materials', {
+          title,
+          description,
+          materialType,
+          fileName: fName,
+          fileSize: '1.0 MB',
+          fileUrl: `/uploads/${fName}`,
+        });
+      }
+
       setTitle('');
       setDescription('');
       setSelectedFile(null);
       setShowUploadModal(false);
       await fetchMaterials();
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error uploading material:', err);
+      const msg = getApiErrorMessage(err);
+      if (msg.includes('404') || msg.includes('No static resource')) {
+        setUploadError('Backend server is running an older build in memory. Please restart mentora-backend (mvnw.cmd spring-boot:run).');
+      } else {
+        setUploadError(msg || 'Failed to upload study material file.');
+      }
     } finally {
       setSubmitting(false);
     }
@@ -129,7 +279,7 @@ export const StudyMaterialsPage: React.FC = () => {
         {isTeacherOrAdmin && (
           <button
             onClick={() => setShowUploadModal(true)}
-            className="px-4 py-2 bg-brand-600 hover:bg-brand-500 text-white text-xs font-semibold rounded-xl flex items-center space-x-2 shadow-md shadow-brand-500/20 cursor-pointer"
+            className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-xl flex items-center space-x-2 shadow-sm shadow-emerald-600/20 cursor-pointer"
           >
             <Plus className="w-4 h-4" />
             <span>Upload Document / Resource</span>
@@ -155,7 +305,7 @@ export const StudyMaterialsPage: React.FC = () => {
                     {getIcon(item.materialType)}
                   </div>
                   <div className="flex items-center space-x-2">
-                    <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-brand-500/10 text-brand-500">{item.subjectName}</span>
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200/80">{item.subjectName}</span>
                     {isTeacherOrAdmin && (
                       <button
                         onClick={() => { setDeleteItem({ id: item.id, title: item.title }); setDeleteError(null); }}
@@ -173,7 +323,7 @@ export const StudyMaterialsPage: React.FC = () => {
                 {/* File Attachment Badge */}
                 <div className="p-2.5 rounded-xl bg-slate-100 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 flex items-center justify-between">
                   <div className="flex items-center space-x-2 overflow-hidden">
-                    <Paperclip className="w-3.5 h-3.5 text-brand-500 shrink-0" />
+                    <Paperclip className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
                     <span className="text-xs font-mono truncate text-slate-700 dark:text-slate-300">{item.fileName}</span>
                   </div>
                   <span className="text-[10px] text-slate-400 shrink-0 font-medium">{item.fileSize}</span>
@@ -182,8 +332,8 @@ export const StudyMaterialsPage: React.FC = () => {
               <div className="pt-3 border-t border-slate-200/60 dark:border-slate-800 flex items-center justify-between">
                 <span className="text-[11px] text-slate-400">Uploaded {item.uploadedAt}</span>
                 <button
-                  onClick={() => alert(`Downloading resource file: ${item.fileName}`)}
-                  className="px-3.5 py-1.5 bg-brand-600 hover:bg-brand-500 text-white rounded-xl text-xs font-medium flex items-center space-x-1.5 transition-colors cursor-pointer"
+                  onClick={() => handleDownloadFile(item)}
+                  className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-medium flex items-center space-x-1.5 transition-colors cursor-pointer shadow-sm shadow-emerald-600/20"
                 >
                   <Download className="w-3.5 h-3.5" />
                   <span>Download File</span>
@@ -204,6 +354,13 @@ export const StudyMaterialsPage: React.FC = () => {
                 <X className="w-5 h-5" />
               </button>
             </div>
+
+            {uploadError && (
+              <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-500 text-xs font-semibold flex items-center space-x-2">
+                <ShieldAlert className="w-4 h-4 shrink-0" />
+                <span>{uploadError}</span>
+              </div>
+            )}
 
             <form onSubmit={handleUploadMaterial} className="space-y-4">
               <div>

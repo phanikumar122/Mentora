@@ -33,12 +33,17 @@ public class StudyMaterial {
     @Column(name = "file_size")
     private String fileSize;
 
-    @Column(name = "file_url")
+    @Column(name = "file_url", length = 1000)
     private String fileUrl;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "material_type")
     private MaterialType materialType;
+
+    @Lob
+    @Column(name = "file_data", columnDefinition = "LONGBLOB")
+    @com.fasterxml.jackson.annotation.JsonIgnore
+    private byte[] fileData;
 
     @Column(name = "uploaded_at")
     private LocalDateTime uploadedAt;
@@ -88,6 +93,9 @@ public class StudyMaterial {
 
     public MaterialType getMaterialType() { return materialType; }
     public void setMaterialType(MaterialType materialType) { this.materialType = materialType; }
+
+    public byte[] getFileData() { return fileData; }
+    public void setFileData(byte[] fileData) { this.fileData = fileData; }
 
     public LocalDateTime getUploadedAt() { return uploadedAt; }
     public void setUploadedAt(LocalDateTime uploadedAt) { this.uploadedAt = uploadedAt; }

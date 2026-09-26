@@ -75,14 +75,8 @@ export const ParentDashboard: React.FC = () => {
     <>
       {/* Parent Hero Welcome Banner */}
       <div className="hero-banner">
-        <div className="absolute right-0 top-0 w-72 h-72 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
-
         <div className="hero-banner-inner">
           <div className="space-y-1 max-w-2xl">
-            <span className="hero-eyebrow border-indigo-500/30 text-indigo-300 mb-3">
-              <HeartHandshake className="w-3.5 h-3.5" />
-              <span>Parent & Guardian Oversight Portal</span>
-            </span>
             <h2 className="hero-title">
               Welcome, {user?.firstName ? `${user.firstName} ${user.lastName}` : 'Parent / Guardian'}
             </h2>

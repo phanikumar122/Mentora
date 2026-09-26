@@ -8,4 +8,5 @@ import java.util.List;
 @Repository
 public interface StudyMaterialRepository extends JpaRepository<StudyMaterial, Long> {
     List<StudyMaterial> findBySubjectId(Long subjectId);
+    List<StudyMaterial> findByTeacherId(Long teacherId);
 }

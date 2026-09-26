@@ -22,5 +22,7 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
         registry.addEndpoint("/ws-mentora")
                 .setAllowedOriginPatterns("*")
                 .withSockJS();
+        registry.addEndpoint("/ws-mentora-raw")
+                .setAllowedOriginPatterns("*");
     }
 }

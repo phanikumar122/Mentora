@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import api, { getApiErrorMessage } from '../../services/api';
+import { addAuditLog } from '../../services/auditService';
 import { Megaphone, Clock, Plus, Send, RefreshCw, AlertCircle, Trash2, X, ShieldAlert } from 'lucide-react';
 import { Announcement } from '../../types';
 import { useAuth } from '../../context/AuthContext';
@@ -68,6 +69,11 @@ export const AnnouncementsPage: React.FC = () => {
         priority,
         author: user?.id ? { id: user.id } : null,
       });
+      addAuditLog({
+        action: 'Campus Broadcast Published',
+        detail: `New ${priority.toLowerCase()} announcement published: "${title}"`,
+        type: priority === 'URGENT' ? 'DANGER' : 'INFO',
+      });
       setTitle('');
       setContent('');
       setShowCreateModal(false);
@@ -88,6 +94,11 @@ export const AnnouncementsPage: React.FC = () => {
       setDeleting(true);
       setDeleteError(null);
       await api.delete(`/announcements/${deleteItem.id}`);
+      addAuditLog({
+        action: 'Announcement Removed',
+        detail: `Deleted announcement broadcast: "${deleteItem.title}"`,
+        type: 'INFO',
+      });
       setAnnouncements(prev => prev.filter(a => a.id !== deleteItem.id));
       setDeleteItem(null);
     } catch (err: any) {
@@ -118,7 +129,7 @@ export const AnnouncementsPage: React.FC = () => {
           {canPost && (
             <button
               onClick={() => { setShowCreateModal(true); setCreateError(null); }}
-              className="px-4 py-2 bg-brand-600 hover:bg-brand-500 text-white text-xs font-semibold rounded-xl flex items-center space-x-2 shadow-md shadow-brand-500/20"
+              className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-xl flex items-center space-x-2 shadow-sm shadow-emerald-600/20 cursor-pointer"
             >
               <Plus className="w-4 h-4" />
               <span>Post Announcement</span>
@@ -128,8 +139,8 @@ export const AnnouncementsPage: React.FC = () => {
       </div>
 
       {errorMsg && (
-        <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-500 text-xs flex items-center space-x-2">
-          <AlertCircle className="w-4 h-4 shrink-0" />
+        <div className="p-4 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-xs flex items-center space-x-2">
+          <AlertCircle className="w-4 h-4 shrink-0 text-amber-600" />
           <span>{errorMsg}</span>
         </div>
       )}
@@ -138,7 +149,7 @@ export const AnnouncementsPage: React.FC = () => {
         <div className="p-8 text-center text-xs text-slate-400">Loading live announcements...</div>
       ) : announcements.length === 0 ? (
         <div className="academic-card p-12 text-center rounded-2xl space-y-3">
-          <Megaphone className="w-10 h-10 text-brand-500 mx-auto" />
+          <Megaphone className="w-10 h-10 text-emerald-600 mx-auto" />
           <h3 className="text-sm font-bold">No Announcements Published Yet</h3>
           <p className="text-xs text-slate-500">
             {canPost ? 'Click "Post Announcement" above to broadcast a notice to all students and faculty.' : 'No announcements have been posted yet. Check back soon!'}
@@ -146,7 +157,7 @@ export const AnnouncementsPage: React.FC = () => {
           {canPost && (
             <button
               onClick={() => { setShowCreateModal(true); setCreateError(null); }}
-              className="px-4 py-2 bg-brand-600 text-white rounded-xl text-xs font-semibold inline-flex items-center space-x-1.5"
+              className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-semibold inline-flex items-center space-x-1.5 cursor-pointer shadow-sm shadow-emerald-600/20"
             >
               <Plus className="w-4 h-4" />
               <span>Broadcast First Announcement</span>
@@ -160,8 +171,8 @@ export const AnnouncementsPage: React.FC = () => {
               <div className="flex items-center justify-between">
                 <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${
                   item.priority === 'HIGH' || item.priority === 'URGENT'
-                    ? 'bg-rose-500/10 text-rose-500 border border-rose-500/20'
-                    : 'bg-brand-500/10 text-brand-500'
+                    ? 'bg-rose-50 text-rose-700 border border-rose-200'
+                    : 'bg-emerald-50 text-emerald-700 border border-emerald-200/80'
                 }`}>
                   {item.priority} Priority
                 </span>

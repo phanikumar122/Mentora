@@ -5,6 +5,7 @@ import com.mentora.entity.AssignmentSubmission;
 import com.mentora.repository.AssignmentRepository;
 import com.mentora.repository.AssignmentSubmissionRepository;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
@@ -30,6 +31,7 @@ public class AssignmentController {
     }
 
     @PostMapping
+    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ROLE_TEACHER')")
     public ResponseEntity<?> createAssignment(@RequestBody Map<String, Object> payload) {
         try {
             String title = (String) payload.get("title");
@@ -62,11 +64,13 @@ public class AssignmentController {
     }
 
     @GetMapping("/{id}/submissions")
+    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ROLE_TEACHER')")
     public ResponseEntity<List<AssignmentSubmission>> getSubmissions(@PathVariable Long id) {
         return ResponseEntity.ok(submissionRepository.findByAssignmentId(id));
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ROLE_TEACHER')")
     public ResponseEntity<?> deleteAssignment(@PathVariable Long id) {
         try {
             // BUG-9 FIX: Single bulk DELETE instead of loading submissions into memory

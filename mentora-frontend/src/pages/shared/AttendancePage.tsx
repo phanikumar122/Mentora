@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import api from '../../services/api';
+import { addAuditLog } from '../../services/auditService';
 import {
   CalendarCheck,
   CheckCircle2,
@@ -63,23 +64,38 @@ export const AttendancePage: React.FC = () => {
   const [historyFilter, setHistoryFilter] = useState<string>('ALL');
   const [searchHistory, setSearchHistory] = useState<string>('');
 
-  // Fetch Teacher Roster Data
+  // Fetch Teacher Roster Data (ONLY assigned advisees for Mentors) - Fully Parallelized
   const fetchTeacherRoster = useCallback(async () => {
     try {
       setRosterLoading(true);
-      const [usersRes, coursesRes] = await Promise.all([
-        api.get('/users').catch(() => ({ data: [] })),
+      const [coursesRes, rosterRes] = await Promise.all([
         api.get('/courses').catch(() => ({ data: [] })),
+        user?.role === 'ROLE_TEACHER'
+          ? api.get('/users/teachers/my-students').catch(() => ({ data: [] }))
+          : api.get('/users').catch(() => ({ data: [] })),
       ]);
 
-      const studentUsers = (usersRes.data || [])
-        .filter((u: any) => u.role === 'ROLE_STUDENT')
-        .map((u: any) => ({
-          id: u.id,
-          name: `${u.firstName} ${u.lastName}`,
+      let studentUsers: { id: string; name: string; email: string; status: 'PRESENT' | 'ABSENT' | 'LATE' }[] = [];
+
+      if (user?.role === 'ROLE_TEACHER') {
+        // Fetch ONLY students assigned to this mentor
+        studentUsers = (rosterRes.data || []).map((u: any) => ({
+          id: String(u.studentUserId || u.id),
+          name: u.name || `${u.firstName || ''} ${u.lastName || ''}`.trim() || 'Student',
           email: u.email,
           status: 'PRESENT' as const,
         }));
+      } else {
+        // Admin view: filter all student users
+        studentUsers = (rosterRes.data || [])
+          .filter((u: any) => u.role === 'ROLE_STUDENT')
+          .map((u: any) => ({
+            id: String(u.id),
+            name: `${u.firstName} ${u.lastName}`,
+            email: u.email,
+            status: 'PRESENT' as const,
+          }));
+      }
 
       setStudents(studentUsers);
       setCourses(coursesRes.data || []);
@@ -91,7 +107,7 @@ export const AttendancePage: React.FC = () => {
     } finally {
       setRosterLoading(false);
     }
-  }, [selectedCourse]);
+  }, [user?.role, selectedCourse]);
 
   // Fetch Student / Parent Analytics Data
   const fetchStudentAnalytics = useCallback(async () => {
@@ -146,6 +162,11 @@ export const AttendancePage: React.FC = () => {
       }));
 
       await api.post('/attendance/batch', payload);
+      addAuditLog({
+        action: 'Attendance Roster Recorded',
+        detail: `Saved session attendance roster for ${students.length} students (${selectedCourse ? selectedCourse.name : 'Course'}) on ${sessionDate}`,
+        type: 'SUCCESS',
+      });
       setSavedSuccess(true);
       setTimeout(() => setSavedSuccess(false), 4000);
     } catch (err: any) {
@@ -488,8 +509,14 @@ export const AttendancePage: React.FC = () => {
           {students.length === 0 ? (
             <div className="p-12 text-center text-xs text-slate-500 space-y-2">
               <Users className="w-10 h-10 text-slate-400 mx-auto" />
-              <h4 className="font-bold text-slate-700 dark:text-slate-300 text-sm">No Registered Students Found</h4>
-              <p className="text-xs text-slate-400">System Administrators can register Student accounts in the Manage Users portal.</p>
+              <h4 className="font-bold text-slate-700 dark:text-slate-300 text-sm">
+                {user?.role === 'ROLE_TEACHER' ? 'No Assigned Mentees Found' : 'No Registered Students Found'}
+              </h4>
+              <p className="text-xs text-slate-400">
+                {user?.role === 'ROLE_TEACHER'
+                  ? 'No student advisees have been assigned to your mentor profile yet. System Administrators can assign students in the Manage Users portal.'
+                  : 'System Administrators can register Student accounts in the Manage Users portal.'}
+              </p>
             </div>
           ) : (
             <div className="space-y-2">

@@ -143,7 +143,7 @@ export const AssignmentsPage: React.FC = () => {
         {isTeacherOrAdmin && (
           <button
             onClick={() => { setShowCreateModal(true); setCreateError(null); }}
-            className="px-4 py-2 bg-brand-600 hover:bg-brand-500 text-white text-xs font-semibold rounded-xl flex items-center space-x-2 shadow-md shadow-brand-500/20 cursor-pointer"
+            className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-xl flex items-center space-x-2 shadow-sm shadow-emerald-600/20 cursor-pointer"
           >
             <Plus className="w-4 h-4" />
             <span>Create Assignment</span>
@@ -165,13 +165,13 @@ export const AssignmentsPage: React.FC = () => {
             <div key={item.id} className="academic-card p-5 rounded-2xl flex flex-col md:flex-row md:items-center justify-between gap-4">
               <div className="space-y-2 flex-1">
                 <div className="flex items-center space-x-2">
-                  <span className="px-2.5 py-0.5 rounded text-[10px] font-bold bg-brand-500/10 text-brand-500">{item.subjectName}</span>
-                  <span className="px-2.5 py-0.5 rounded text-[10px] font-bold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
+                  <span className="px-2.5 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200/80">{item.subjectName}</span>
+                  <span className="px-2.5 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-600">
                     Max Marks: {item.maxMarks}
                   </span>
                 </div>
-                <h3 className="font-bold text-base text-slate-900 dark:text-white">{item.title}</h3>
-                <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">{item.description}</p>
+                <h3 className="font-bold text-base text-slate-900">{item.title}</h3>
+                <p className="text-xs text-slate-600 leading-relaxed">{item.description}</p>
               </div>
               <div className="flex flex-col md:items-end space-y-2">
                 <span className="text-xs text-slate-400 flex items-center space-x-1">
@@ -182,7 +182,7 @@ export const AssignmentsPage: React.FC = () => {
                   {!isTeacherOrAdmin && (
                     <button
                       onClick={() => setSelectedAssignment(item)}
-                      className="px-4 py-2 bg-brand-600 hover:bg-brand-500 text-white rounded-xl text-xs font-semibold flex items-center space-x-1.5 shadow-md shadow-brand-500/20 cursor-pointer"
+                      className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-semibold flex items-center space-x-1.5 shadow-sm shadow-emerald-600/20 cursor-pointer"
                     >
                       <Upload className="w-4 h-4" />
                       <span>Submit Solution</span>
@@ -191,7 +191,7 @@ export const AssignmentsPage: React.FC = () => {
                   {isTeacherOrAdmin && (
                     <button
                       onClick={() => { setDeleteItem({ id: item.id, title: item.title }); setDeleteError(null); }}
-                      className="p-2 bg-rose-500/10 hover:bg-rose-500 text-rose-500 hover:text-white rounded-xl transition-colors cursor-pointer"
+                      className="p-2 bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 rounded-xl transition-colors cursor-pointer"
                       title="Delete Assignment"
                     >
                       <Trash2 className="w-4 h-4" />

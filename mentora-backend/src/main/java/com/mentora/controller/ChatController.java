@@ -2,6 +2,7 @@ package com.mentora.controller;
 
 import com.mentora.dto.ChatMessageDto;
 import com.mentora.entity.ChatMessage;
+import com.mentora.entity.Role;
 import com.mentora.entity.User;
 import com.mentora.repository.ChatMessageRepository;
 import com.mentora.repository.UserRepository;
@@ -15,6 +16,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
+import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -68,6 +70,14 @@ public class ChatController {
             u2Id = u2.getId();
         }
 
+        // Students can only access chats with Teachers and Admins (not other students)
+        if (u1 != null && u2 != null) {
+            if (u1.getRole() == Role.ROLE_STUDENT && u2.getRole() == Role.ROLE_STUDENT) {
+                log.warn("Blocked direct message fetch attempt between students: senderId={}, recipientId={}", u1Id, u2Id);
+                return ResponseEntity.ok(Collections.emptyList());
+            }
+        }
+
         List<ChatMessage> messages = chatMessageRepository.findDirectMessagesBetween(u1Id, u2Id);
         List<ChatMessageDto> dtos = messages.stream().map(m -> ChatMessageDto.builder()
                 .id(m.getId())
@@ -99,6 +109,14 @@ public class ChatController {
                     .orElseGet(() -> userRepository.findByEmail(chatMessageDto.getRecipientId()).orElse(null));
         }
 
+        // Restriction: Students cannot send messages to other students
+        if (sender != null && recipient != null) {
+            if (sender.getRole() == Role.ROLE_STUDENT && recipient.getRole() == Role.ROLE_STUDENT) {
+                log.warn("Blocked messaging attempt between students: sender={}, recipient={}", sender.getId(), recipient.getId());
+                return chatMessageDto;
+            }
+        }
+
         if (sender != null) {
             ChatMessage message = ChatMessage.builder()
                     .sender(sender)
@@ -120,16 +138,17 @@ public class ChatController {
 
             if (recipient != null) {
                 try {
+                    // Direct user topic broadcasts for instant zero-latency STOMP subscription
+                    messagingTemplate.convertAndSend("/topic/user/" + recipient.getId(), chatMessageDto);
+                    messagingTemplate.convertAndSend("/topic/user/" + sender.getId(), chatMessageDto);
                     messagingTemplate.convertAndSendToUser(recipient.getId(), "/queue/messages", chatMessageDto);
                 } catch (Exception e) {
-                    // BUG-11 FIX: Log STOMP delivery failures instead of silently swallowing them
                     log.warn("STOMP direct delivery failed for recipient='{}': {}", recipient.getId(), e.getMessage());
                 }
             } else if (chatMessageDto.getRoomId() != null) {
                 try {
                     messagingTemplate.convertAndSend("/topic/room/" + chatMessageDto.getRoomId(), chatMessageDto);
                 } catch (Exception e) {
-                    // BUG-11 FIX: Log STOMP room broadcast failures
                     log.warn("STOMP room broadcast failed for roomId='{}': {}", chatMessageDto.getRoomId(), e.getMessage());
                 }
             }

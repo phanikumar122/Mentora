@@ -82,7 +82,7 @@ export interface StudyMaterial {
 }
 
 export interface ChatMessage {
-  id?: number;
+  id?: number | string;
   senderId: string;
   senderName: string;
   recipientId?: string;

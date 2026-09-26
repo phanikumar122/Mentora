@@ -71,11 +71,13 @@ public class SecurityConfig {
                                 .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                                 // Allow login & registration publicly
                                 .requestMatchers("/api/v1/auth/**").permitAll()
+                                // Allow study material file downloads publicly
+                                .requestMatchers(HttpMethod.GET, "/api/v1/materials/files/**", "/api/v1/materials/*/download").permitAll()
                                 // Allow H2 console, Swagger docs publicly
                                 .requestMatchers("/h2-console/**").permitAll()
                                 .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
-                                // Allow WebSocket endpoint publicly
-                                .requestMatchers("/ws-mentora/**").permitAll()
+                                // Allow WebSocket endpoints publicly
+                                .requestMatchers("/ws-mentora/**", "/ws-mentora-raw/**").permitAll()
                                 // All other API endpoints require a valid JWT token
                                 // NOTE: JwtAuthFilter gracefully handles stale/invalid tokens
                                 // by catching exceptions and not setting SecurityContext,
