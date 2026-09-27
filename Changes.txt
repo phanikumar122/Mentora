@@ -1,5 +1,0 @@
-student was giving the attendance.
-after assigning one student to the mentor , the name of student should disapper while linking modal.
-student - teacher - parent linking should be perfect.
-ui / ux.
-heatmaps integration.
