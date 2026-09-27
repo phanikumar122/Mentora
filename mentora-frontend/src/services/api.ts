@@ -1,6 +1,14 @@
 import axios from 'axios';
 
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8081/api/v1';
+const resolveApiBase = (): string => {
+  let envUrl = (import.meta.env.VITE_API_URL || 'http://localhost:8081/api/v1').trim().replace(/\/+$/, '');
+  if (!envUrl.endsWith('/api/v1')) {
+    envUrl = `${envUrl}/api/v1`;
+  }
+  return envUrl;
+};
+
+export const API_BASE = resolveApiBase();
 
 const api = axios.create({
   baseURL: API_BASE,
