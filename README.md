@@ -46,17 +46,15 @@ Mentora/
 
 ---
 
-## Test Account Credentials
+## Administrator Account Credentials
 
-The backend automatically seeds the database on startup with ready-to-use test accounts:
+The backend automatically initializes the primary Administrator account on startup:
 
 | Role | Email | Password |
 | :--- | :--- | :--- |
-| **Student** | `student@mentora.com` | `Password123!` |
-| **Teacher** | `teacher@mentora.com` | `Password123!` |
-| **Admin** | `admin@mentora.com` | `Password123!` |
+| **Admin** | `admin@mentora.com` | `admin@mentora` |
 
-*Note: Quick-login shortcut buttons are also built directly into the Login screen for instant testing.*
+*Note: All student, faculty, and department setup is managed through the Administrator portal.*
 
 ---
 

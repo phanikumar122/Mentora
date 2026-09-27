@@ -11,7 +11,7 @@ This guide provides instructions for running and operating **Mentora**.
 Upon starting the backend, the system automatically initializes the primary Administrator account:
 
 - **Email**: `admin@mentora.com`
-- **Password**: `Password123!`
+- **Password**: `admin@mentora`
 - **Role**: `ROLE_ADMIN`
 
 ---
@@ -44,7 +44,7 @@ npm run dev
 
 ## 👥 How Administrator Manages Accounts & Academic Allocations
 
-1. Log into `http://localhost:3000` as `admin@mentora.com` / `Password123!`.
+1. Log into `http://localhost:3000` as `admin@mentora.com` / `admin@mentora`.
 2. Navigate to **Manage Users** (`/admin/users`) to create **Student**, **Teacher**, or **Administrator** accounts.
 3. Navigate to **Manage Departments** (`/admin/departments`) to define university departments and offered courses.
 4. Newly created Student and Teacher credentials can then be used to log into their respective portals!
