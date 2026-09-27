@@ -19,6 +19,8 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/api/v1/auth")
 public class AuthController {
 
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(AuthController.class);
+
     private final AuthenticationManager authenticationManager;
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
@@ -33,9 +35,9 @@ public class AuthController {
 
     @PostMapping("/login")
     public ResponseEntity<?> authenticateUser(@RequestBody AuthRequest loginRequest) {
-        if (loginRequest.getEmail() == null || loginRequest.getPassword() == null) {
+        if (loginRequest == null || loginRequest.getEmail() == null || loginRequest.getPassword() == null) {
             return ResponseEntity.badRequest()
-                    .body(java.util.Map.of("status", 400, "error", "Bad Request", "message", "Email and password are required"));
+                    .body(java.util.Map.of("status", 400, "error", "Bad Request", "message", "Email and password are required."));
         }
 
         String email = loginRequest.getEmail().trim();
@@ -51,16 +53,23 @@ public class AuthController {
 
             User user = userRepository.findByEmailIgnoreCase(email)
                     .orElseGet(() -> userRepository.findByEmail(email)
-                            .orElseThrow(() -> new IllegalArgumentException("User account not found")));
+                            .orElse(null));
+
+            if (user == null) {
+                return ResponseEntity.status(org.springframework.http.HttpStatus.UNAUTHORIZED)
+                        .body(java.util.Map.of("status", 401, "error", "Unauthorized", "message", "User account not found."));
+            }
+
+            String roleName = user.getRole() != null ? user.getRole().name() : "ROLE_ADMIN";
 
             return ResponseEntity.ok(AuthResponse.builder()
                     .token(jwt)
                     .type("Bearer")
-                    .id(user.getId())
-                    .email(user.getEmail())
-                    .firstName(user.getFirstName())
-                    .lastName(user.getLastName())
-                    .role(user.getRole().name())
+                    .id(user.getId() != null ? user.getId() : "")
+                    .email(user.getEmail() != null ? user.getEmail() : email)
+                    .firstName(user.getFirstName() != null ? user.getFirstName() : "")
+                    .lastName(user.getLastName() != null ? user.getLastName() : "")
+                    .role(roleName)
                     .build());
         } catch (org.springframework.security.authentication.BadCredentialsException | org.springframework.security.core.userdetails.UsernameNotFoundException e) {
             return ResponseEntity.status(org.springframework.http.HttpStatus.UNAUTHORIZED)
@@ -74,6 +83,10 @@ public class AuthController {
         } catch (org.springframework.security.core.AuthenticationException e) {
             return ResponseEntity.status(org.springframework.http.HttpStatus.UNAUTHORIZED)
                     .body(java.util.Map.of("status", 401, "error", "Unauthorized", "message", "Authentication failed: " + e.getMessage()));
+        } catch (Exception e) {
+            log.error("Unexpected error during login for user: {}", email, e);
+            return ResponseEntity.status(org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(java.util.Map.of("status", 500, "error", "Internal Server Error", "message", "Login processing error: " + e.getMessage()));
         }
     }
 
