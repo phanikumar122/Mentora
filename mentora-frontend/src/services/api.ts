@@ -39,12 +39,26 @@ api.interceptors.response.use(
 
 export const getApiErrorMessage = (err: unknown): string => {
   if (!err) return 'An unexpected error occurred.';
-  const axiosErr = err as { response?: { data?: { message?: string } | string }; message?: string };
+  const axiosErr = err as {
+    response?: { data?: { message?: string } | string; status?: number };
+    message?: string;
+    code?: string;
+  };
+
   if (axiosErr.response?.data && typeof axiosErr.response.data === 'object' && axiosErr.response.data.message) {
     return axiosErr.response.data.message;
   }
-  if (typeof axiosErr.response?.data === 'string' && (axiosErr.response.data as string).trim()) {
-    return axiosErr.response.data as string;
+  if (typeof axiosErr.response?.data === 'string' && axiosErr.response.data.trim()) {
+    return axiosErr.response.data;
+  }
+  if (axiosErr.response?.status === 401) {
+    return 'Invalid email or password. Please verify your credentials.';
+  }
+  if (axiosErr.response?.status === 403) {
+    return 'Access forbidden. Please verify your account role or permissions.';
+  }
+  if (axiosErr.code === 'ERR_NETWORK' || !axiosErr.response) {
+    return `Unable to connect to the backend server (${API_BASE}). Please verify the backend API is online and CORS is configured.`;
   }
   if (axiosErr.message) {
     return axiosErr.message;

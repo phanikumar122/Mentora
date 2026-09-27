@@ -33,7 +33,7 @@ public class SecurityConfig {
     private final JwtAuthFilter jwtAuthFilter;
 
     // BUG-13 FIX: Read allowed origins from config instead of hardcoding "*" with credentials
-    @org.springframework.beans.factory.annotation.Value("${mentora.cors.allowed-origins:http://localhost:3000,http://localhost:3001}")
+    @org.springframework.beans.factory.annotation.Value("${mentora.cors.allowed-origins:*}")
     private String allowedOrigins;
 
     public SecurityConfig(UserDetailsServiceImpl userDetailsService, JwtAuthFilter jwtAuthFilter) {
@@ -95,9 +95,17 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        // BUG-13 FIX: Use explicit origins from config instead of wildcard + credentials
-        List<String> origins = Arrays.asList(allowedOrigins.split(","));
-        configuration.setAllowedOriginPatterns(origins);
+        List<String> origins = Arrays.stream(allowedOrigins.split(","))
+                .map(String::trim)
+                .filter(s -> !s.isEmpty())
+                .toList();
+
+        if (origins.isEmpty() || origins.contains("*")) {
+            configuration.setAllowedOriginPatterns(List.of("*"));
+        } else {
+            configuration.setAllowedOriginPatterns(origins);
+        }
+
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
         configuration.setAllowedHeaders(List.of("*"));
         configuration.setExposedHeaders(List.of("*"));
