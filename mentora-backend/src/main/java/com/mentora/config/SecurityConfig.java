@@ -69,6 +69,8 @@ public class SecurityConfig {
                         auth
                                 // Allow browser CORS preflight OPTIONS requests without auth
                                 .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                                // Allow health check monitoring probes publicly (UptimeRobot, Render, etc.)
+                                .requestMatchers("/health", "/health/**", "/api/v1/health", "/api/v1/health/**").permitAll()
                                 // Allow login & registration publicly
                                 .requestMatchers("/api/v1/auth/**").permitAll()
                                 // Allow study material file downloads publicly

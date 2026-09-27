@@ -49,6 +49,12 @@ public class DataInitializer implements CommandLineRunner {
 
     @Override
     public void run(String... args) {
+        if (userRepository.count() > 0) {
+            log.info("Mentora — Existing database detected with {} users. Using existing database accounts.", userRepository.count());
+            return;
+        }
+
+        log.info("Mentora — Initializing default accounts for fresh database...");
         // Legacy admin account (backward compatibility)
         seedUser("admin@mentora.com",    "Password123!",  "System",    "Administrator", Role.ROLE_ADMIN,   "+1 555-0100");
 

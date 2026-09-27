@@ -10,8 +10,6 @@ import {
   Eye,
   EyeOff,
   GraduationCap,
-  Sparkles,
-  UserCheck,
 } from 'lucide-react';
 import { Role } from '../../types';
 
@@ -31,12 +29,15 @@ export const Login: React.FC = () => {
     setError('');
 
     try {
-      const response = await api.post('/auth/login', { email, password });
+      const response = await api.post('/auth/login', { 
+        email: email.trim(), 
+        password 
+      });
       const { token, id, firstName: fName, lastName: lName, role: userRole } = response.data;
 
       login(token, {
         id,
-        email,
+        email: email.trim(),
         firstName: fName,
         lastName: lName,
         role: userRole as Role,
@@ -50,12 +51,6 @@ export const Login: React.FC = () => {
     }
   };
 
-  const setDemoCredentials = (demoEmail: string, demoPass: string) => {
-    setEmail(demoEmail);
-    setPassword(demoPass);
-    setError('');
-  };
-
   return (
     <div className="min-h-screen bg-[#f8fafc] flex items-center justify-center p-4 sm:p-6 lg:p-10 relative overflow-hidden">
       {/* Animated Background Mesh Orbs */}
@@ -65,7 +60,7 @@ export const Login: React.FC = () => {
       {/* Main Login Card */}
       <div className="w-full max-w-5xl bg-white border border-slate-200/90 rounded-3xl shadow-2xl shadow-slate-900/10 overflow-hidden grid grid-cols-1 lg:grid-cols-12 relative z-10 animate-fade-up">
         {/* Left Side: Institutional Showcase */}
-        <div className="hidden lg:flex lg:col-span-5 bg-gradient-to-br from-[#022c22] via-[#064e3b] to-[#047857] p-10 flex-col justify-between relative text-white overflow-hidden">
+        <div className="hidden lg:flex lg:col-span-5 bg-gradient-to-br from-[#022c22] via-[#064e3b] to-[#047857] p-10 flex-col justify-center relative text-white overflow-hidden">
           {/* Subtle Decorative Grid Pattern */}
           <div className="absolute inset-0 bg-[radial-gradient(#a7f3d0_1px,transparent_1px)] [background-size:24px_24px] opacity-10 pointer-events-none" />
 
@@ -91,48 +86,6 @@ export const Login: React.FC = () => {
               </p>
             </div>
           </div>
-
-          {/* Quick Preset Selector in Left Banner */}
-          <div className="relative z-10 pt-6 border-t border-white/10 space-y-2.5">
-            <div className="flex items-center space-x-2 text-emerald-200 text-xs font-semibold">
-              <Sparkles className="w-3.5 h-3.5" />
-              <span>Quick Login Demo Accounts:</span>
-            </div>
-            <div className="grid grid-cols-2 gap-2">
-              <button
-                type="button"
-                onClick={() => setDemoCredentials('student@mentora.edu', 'student123')}
-                className="text-left px-3 py-2 rounded-xl bg-white/10 hover:bg-white/20 border border-white/10 transition-all text-xs cursor-pointer"
-              >
-                <span className="font-bold block text-white">Student</span>
-                <span className="text-[10px] text-emerald-200 truncate block">student@mentora.edu</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setDemoCredentials('teacher@mentora.edu', 'teacher123')}
-                className="text-left px-3 py-2 rounded-xl bg-white/10 hover:bg-white/20 border border-white/10 transition-all text-xs cursor-pointer"
-              >
-                <span className="font-bold block text-white">Teacher</span>
-                <span className="text-[10px] text-emerald-200 truncate block">teacher@mentora.edu</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setDemoCredentials('admin@mentora.edu', 'admin123')}
-                className="text-left px-3 py-2 rounded-xl bg-white/10 hover:bg-white/20 border border-white/10 transition-all text-xs cursor-pointer"
-              >
-                <span className="font-bold block text-white">Admin</span>
-                <span className="text-[10px] text-emerald-200 truncate block">admin@mentora.edu</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setDemoCredentials('parent@mentora.edu', 'parent123')}
-                className="text-left px-3 py-2 rounded-xl bg-white/10 hover:bg-white/20 border border-white/10 transition-all text-xs cursor-pointer"
-              >
-                <span className="font-bold block text-white">Parent</span>
-                <span className="text-[10px] text-emerald-200 truncate block">parent@mentora.edu</span>
-              </button>
-            </div>
-          </div>
         </div>
 
         {/* Right Side: Authentication Form */}
@@ -144,46 +97,6 @@ export const Login: React.FC = () => {
             </p>
           </div>
 
-          {/* Quick Fill Demo Pills (Mobile & Desktop) */}
-          <div className="p-3 bg-slate-50 border border-slate-200/80 rounded-2xl space-y-2">
-            <div className="flex items-center justify-between text-slate-500 text-[11px] font-semibold">
-              <span className="flex items-center gap-1.5">
-                <UserCheck className="w-3.5 h-3.5 text-emerald-600" />
-                Fill Demo Credentials:
-              </span>
-            </div>
-            <div className="flex flex-wrap gap-1.5">
-              <button
-                type="button"
-                onClick={() => setDemoCredentials('student@mentora.edu', 'student123')}
-                className="px-2.5 py-1 text-xs font-semibold bg-white hover:bg-emerald-50 text-slate-700 hover:text-emerald-700 border border-slate-200 hover:border-emerald-300 rounded-lg transition-all cursor-pointer shadow-2xs"
-              >
-                🎓 Student
-              </button>
-              <button
-                type="button"
-                onClick={() => setDemoCredentials('teacher@mentora.edu', 'teacher123')}
-                className="px-2.5 py-1 text-xs font-semibold bg-white hover:bg-emerald-50 text-slate-700 hover:text-emerald-700 border border-slate-200 hover:border-emerald-300 rounded-lg transition-all cursor-pointer shadow-2xs"
-              >
-                👨‍🏫 Teacher
-              </button>
-              <button
-                type="button"
-                onClick={() => setDemoCredentials('admin@mentora.edu', 'admin123')}
-                className="px-2.5 py-1 text-xs font-semibold bg-white hover:bg-emerald-50 text-slate-700 hover:text-emerald-700 border border-slate-200 hover:border-emerald-300 rounded-lg transition-all cursor-pointer shadow-2xs"
-              >
-                🛡️ Admin
-              </button>
-              <button
-                type="button"
-                onClick={() => setDemoCredentials('parent@mentora.edu', 'parent123')}
-                className="px-2.5 py-1 text-xs font-semibold bg-white hover:bg-emerald-50 text-slate-700 hover:text-emerald-700 border border-slate-200 hover:border-emerald-300 rounded-lg transition-all cursor-pointer shadow-2xs"
-              >
-                👨‍👩‍👧 Parent
-              </button>
-            </div>
-          </div>
-
           {/* Error Alert Banner */}
           {error && (
             <div className="p-4 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-semibold flex items-start space-x-3 shadow-sm animate-fade-in">
@@ -193,7 +106,7 @@ export const Login: React.FC = () => {
           )}
 
           {/* Login Form */}
-          <form onSubmit={handleLogin} className="space-y-4">
+          <form onSubmit={handleLogin} className="space-y-5">
             <div className="space-y-1.5">
               <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">
                 Email Address

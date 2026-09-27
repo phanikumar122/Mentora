@@ -27,6 +27,7 @@ cd mentora-backend
 ```
 
 - **Backend API**: `http://localhost:8081`
+- **Health Check API (UptimeRobot / Monitoring)**: `http://localhost:8081/health` or `http://localhost:8081/api/v1/health`
 - **Swagger OpenAPI Docs**: `http://localhost:8081/swagger-ui.html`
 
 ### 2. Start the Web Client (`mentora-frontend`)

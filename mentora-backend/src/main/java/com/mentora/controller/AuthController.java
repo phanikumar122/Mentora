@@ -33,24 +33,48 @@ public class AuthController {
 
     @PostMapping("/login")
     public ResponseEntity<?> authenticateUser(@RequestBody AuthRequest loginRequest) {
-        Authentication authentication = authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(loginRequest.getEmail(), loginRequest.getPassword())
-        );
+        if (loginRequest.getEmail() == null || loginRequest.getPassword() == null) {
+            return ResponseEntity.badRequest()
+                    .body(java.util.Map.of("status", 400, "error", "Bad Request", "message", "Email and password are required"));
+        }
 
-        SecurityContextHolder.getContext().setAuthentication(authentication);
-        String jwt = jwtUtils.generateToken((org.springframework.security.core.userdetails.UserDetails) authentication.getPrincipal());
+        String email = loginRequest.getEmail().trim();
+        String password = loginRequest.getPassword();
 
-        User user = userRepository.findByEmail(loginRequest.getEmail()).orElseThrow();
+        try {
+            Authentication authentication = authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(email, password)
+            );
 
-        return ResponseEntity.ok(AuthResponse.builder()
-                .token(jwt)
-                .type("Bearer")
-                .id(user.getId())
-                .email(user.getEmail())
-                .firstName(user.getFirstName())
-                .lastName(user.getLastName())
-                .role(user.getRole().name())
-                .build());
+            SecurityContextHolder.getContext().setAuthentication(authentication);
+            String jwt = jwtUtils.generateToken((org.springframework.security.core.userdetails.UserDetails) authentication.getPrincipal());
+
+            User user = userRepository.findByEmailIgnoreCase(email)
+                    .orElseGet(() -> userRepository.findByEmail(email)
+                            .orElseThrow(() -> new IllegalArgumentException("User account not found")));
+
+            return ResponseEntity.ok(AuthResponse.builder()
+                    .token(jwt)
+                    .type("Bearer")
+                    .id(user.getId())
+                    .email(user.getEmail())
+                    .firstName(user.getFirstName())
+                    .lastName(user.getLastName())
+                    .role(user.getRole().name())
+                    .build());
+        } catch (org.springframework.security.authentication.BadCredentialsException | org.springframework.security.core.userdetails.UsernameNotFoundException e) {
+            return ResponseEntity.status(org.springframework.http.HttpStatus.UNAUTHORIZED)
+                    .body(java.util.Map.of("status", 401, "error", "Unauthorized", "message", "Invalid email or password. Please check your credentials."));
+        } catch (org.springframework.security.authentication.DisabledException e) {
+            return ResponseEntity.status(org.springframework.http.HttpStatus.FORBIDDEN)
+                    .body(java.util.Map.of("status", 403, "error", "Forbidden", "message", "Your account is disabled. Please contact your administrator."));
+        } catch (org.springframework.security.authentication.LockedException e) {
+            return ResponseEntity.status(org.springframework.http.HttpStatus.FORBIDDEN)
+                    .body(java.util.Map.of("status", 403, "error", "Forbidden", "message", "Your account is locked. Please contact your administrator."));
+        } catch (org.springframework.security.core.AuthenticationException e) {
+            return ResponseEntity.status(org.springframework.http.HttpStatus.UNAUTHORIZED)
+                    .body(java.util.Map.of("status", 401, "error", "Unauthorized", "message", "Authentication failed: " + e.getMessage()));
+        }
     }
 
     // BUG-5 FIX: @Valid activates Jakarta validation constraints defined on RegisterRequest

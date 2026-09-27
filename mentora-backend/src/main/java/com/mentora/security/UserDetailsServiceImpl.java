@@ -21,13 +21,21 @@ public class UserDetailsServiceImpl implements UserDetailsService {
     @Override
     @Transactional
     public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
-        User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new UsernameNotFoundException("User not found with email: " + email));
+        if (email == null || email.trim().isEmpty()) {
+            throw new UsernameNotFoundException("Email cannot be empty");
+        }
+
+        String trimmedEmail = email.trim();
+        User user = userRepository.findByEmailIgnoreCase(trimmedEmail)
+                .orElseGet(() -> userRepository.findByEmail(trimmedEmail)
+                        .orElseThrow(() -> new UsernameNotFoundException("User not found with email: " + email)));
+
+        boolean enabled = user.getIsEnabled() != null ? user.getIsEnabled() : true;
 
         return new org.springframework.security.core.userdetails.User(
                 user.getEmail(),
                 user.getPassword(),
-                user.getIsEnabled(),
+                enabled,
                 true, true, true,
                 Collections.singletonList(new SimpleGrantedAuthority(user.getRole().name()))
         );
