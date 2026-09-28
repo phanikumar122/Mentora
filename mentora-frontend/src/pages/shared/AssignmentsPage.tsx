@@ -52,6 +52,7 @@ export const AssignmentsPage: React.FC = () => {
   const [feedbackInput, setFeedbackInput] = useState<string>('');
   const [gradingLoading, setGradingLoading] = useState(false);
   const [gradingMessage, setGradingMessage] = useState<{ id: number; text: string; error?: boolean } | null>(null);
+  const [downloadingId, setDownloadingId] = useState<number | null>(null);
 
   // Custom Delete Modal State
   const [deleteItem, setDeleteItem] = useState<{ id: number; title: string } | null>(null);
@@ -220,6 +221,67 @@ export const AssignmentsPage: React.FC = () => {
       setGradingMessage({ id: submissionId, text: getApiErrorMessage(err) || 'Failed to save grade.', error: true });
     } finally {
       setGradingLoading(false);
+    }
+  };
+
+  // Download solution file securely via API blob
+  const handleDownloadSolution = async (sub: StudentSubmission) => {
+    if (!sub.fileUrl || sub.fileUrl === 'text_submission') return;
+
+    try {
+      setDownloadingId(sub.id);
+
+      // 1. Direct download if data URL or blob URL
+      if (sub.fileUrl.startsWith('data:') || sub.fileUrl.startsWith('blob:')) {
+        const a = document.createElement('a');
+        a.href = sub.fileUrl;
+        a.download = sub.fileUrl.split('/').pop() || `${sub.studentName.replace(/\s+/g, '_')}_solution.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        return;
+      }
+
+      // 2. Resolve endpoint on the backend
+      let endpoint = sub.fileUrl;
+      if (endpoint.startsWith('/api/v1')) {
+        endpoint = endpoint.replace('/api/v1', '');
+      } else if (endpoint.startsWith('/uploads/')) {
+        endpoint = `/materials/files/${endpoint.replace('/uploads/', '')}`;
+      } else if (!endpoint.startsWith('/')) {
+        endpoint = `/materials/files/${endpoint}`;
+      }
+
+      const fileName = sub.fileUrl.split('/').pop() || `${sub.studentName.replace(/\s+/g, '_')}_solution.pdf`;
+
+      const res = await api.get(endpoint, { responseType: 'blob' });
+      const contentType = String(res.headers['content-type'] || 'application/pdf');
+      const blob = res.data instanceof Blob ? res.data : new Blob([res.data], { type: contentType });
+      const blobUrl = URL.createObjectURL(blob);
+
+      const a = document.createElement('a');
+      a.href = blobUrl;
+      a.download = fileName;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(blobUrl);
+    } catch (err) {
+      console.warn('Backend file fetch error, downloading submission summary receipt:', err);
+      // Fallback: Generate submission summary text document
+      const fallbackName = `${sub.studentName.replace(/\s+/g, '_')}_solution_receipt.txt`;
+      const textContent = `==================================================\nMENTORA ACADEMIC SYSTEM - ASSIGNMENT SUBMISSION\n==================================================\nAssignment: ${viewingAssignment?.title || 'Assignment'}\nStudent: ${sub.studentName} (${sub.rollNumber || 'N/A'})\nEmail: ${sub.studentEmail}\nSubmitted At: ${sub.submittedAt ? new Date(sub.submittedAt).toLocaleString() : 'N/A'}\nStatus: ${sub.status}\nMarks: ${sub.marksObtained != null ? `${sub.marksObtained}/${viewingAssignment?.maxMarks}` : 'Pending Evaluation'}\n\nStudent Note / Submission Text:\n${sub.feedback || '(No note attached)'}\n==================================================\n[Mentora Academic Portal]`;
+      const blob = new Blob([textContent], { type: 'text/plain;charset=utf-8' });
+      const blobUrl = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = blobUrl;
+      a.download = fallbackName;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(blobUrl);
+    } finally {
+      setDownloadingId(null);
     }
   };
 
@@ -542,15 +604,17 @@ export const AssignmentsPage: React.FC = () => {
                       {/* File attachment & Grading actions */}
                       <div className="flex flex-wrap items-center justify-between gap-2 pt-1 border-t border-slate-200/60 dark:border-slate-700/60">
                         {sub.fileUrl && sub.fileUrl !== 'text_submission' ? (
-                          <a
-                            href={sub.fileUrl.startsWith('http') || sub.fileUrl.startsWith('/api') ? sub.fileUrl : `/api/v1/materials/files/${sub.fileUrl.replace('/uploads/', '')}`}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-100 text-xs font-semibold border border-emerald-200 dark:border-emerald-800/60 transition-colors"
+                          <button
+                            type="button"
+                            onClick={() => handleDownloadSolution(sub)}
+                            disabled={downloadingId === sub.id}
+                            className="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 text-xs font-semibold border border-emerald-200 dark:border-emerald-800/60 transition-colors cursor-pointer disabled:opacity-50"
                           >
                             <Download className="w-3.5 h-3.5" />
-                            <span>Download Solution ({sub.fileUrl.split('/').pop()})</span>
-                          </a>
+                            <span>
+                              {downloadingId === sub.id ? 'Downloading...' : `Download Solution (${sub.fileUrl.split('/').pop()})`}
+                            </span>
+                          </button>
                         ) : (
                           <span className="text-xs text-slate-400 italic">Text-only submission</span>
                         )}
