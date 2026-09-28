@@ -107,24 +107,38 @@ export const AssignmentsPage: React.FC = () => {
     }
   };
 
-  // FIXED MAJOR-8: Actually submit to backend
+  // FIXED MAJOR-8: Submit solution to backend with file upload support
   const handleSubmitSolution = async () => {
     if (!selectedAssignment) return;
     try {
       setSubmissionSubmitting(true);
       setSubmissionError(null);
-      // Send submission note as JSON (file upload requires multipart support on backend)
-      await api.post(`/assignments/${selectedAssignment.id}/submissions`, {
-        studentNote: submissionNote,
-        fileName: selectedFile?.name || 'text_submission',
-      });
+
+      if (selectedFile) {
+        const formData = new FormData();
+        formData.append('file', selectedFile);
+        if (submissionNote) {
+          formData.append('studentNote', submissionNote);
+        }
+        formData.append('fileName', selectedFile.name);
+
+        await api.post(`/assignments/${selectedAssignment.id}/submissions`, formData, {
+          headers: { 'Content-Type': 'multipart/form-data' },
+        });
+      } else {
+        await api.post(`/assignments/${selectedAssignment.id}/submissions`, {
+          studentNote: submissionNote,
+          fileName: 'text_submission',
+        });
+      }
+
       setSubmissionSuccess(`Solution submitted for "${selectedAssignment.title}" successfully!`);
       setSubmissionNote('');
       setSelectedFile(null);
       setTimeout(() => {
         setSelectedAssignment(null);
         setSubmissionSuccess(null);
-      }, 3000);
+      }, 2500);
     } catch (err: any) {
       console.error('Error submitting solution:', err);
       setSubmissionError(getApiErrorMessage(err) || 'Submission failed. Please try again.');
