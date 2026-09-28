@@ -94,8 +94,69 @@ public class AssignmentController {
 
     @GetMapping("/{id}/submissions")
     @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ROLE_TEACHER')")
-    public ResponseEntity<List<AssignmentSubmission>> getSubmissions(@PathVariable Long id) {
-        return ResponseEntity.ok(submissionRepository.findByAssignmentId(id));
+    public ResponseEntity<?> getSubmissions(@PathVariable Long id) {
+        List<AssignmentSubmission> list = submissionRepository.findByAssignmentId(id);
+        List<Map<String, Object>> result = list.stream().map(sub -> {
+            Map<String, Object> map = new java.util.HashMap<>();
+            map.put("id", sub.getId());
+            map.put("fileUrl", sub.getFileUrl());
+            map.put("submittedAt", sub.getSubmittedAt() != null ? sub.getSubmittedAt().toString() : "");
+            map.put("marksObtained", sub.getMarksObtained());
+            map.put("feedback", sub.getFeedback());
+            map.put("status", sub.getStatus() != null ? sub.getStatus().name() : "SUBMITTED");
+
+            if (sub.getStudent() != null) {
+                map.put("studentId", sub.getStudent().getId());
+                map.put("rollNumber", sub.getStudent().getRollNumber() != null ? sub.getStudent().getRollNumber() : "");
+                if (sub.getStudent().getUser() != null) {
+                    String first = sub.getStudent().getUser().getFirstName() != null ? sub.getStudent().getUser().getFirstName() : "";
+                    String last = sub.getStudent().getUser().getLastName() != null ? sub.getStudent().getUser().getLastName() : "";
+                    map.put("studentName", (first + " " + last).trim());
+                    map.put("studentEmail", sub.getStudent().getUser().getEmail());
+                } else {
+                    map.put("studentName", "Student #" + sub.getStudent().getId());
+                    map.put("studentEmail", "");
+                }
+            } else {
+                map.put("studentName", "Unknown Student");
+                map.put("studentEmail", "");
+                map.put("rollNumber", "");
+            }
+            return map;
+        }).collect(java.util.stream.Collectors.toList());
+        return ResponseEntity.ok(result);
+    }
+
+    @PutMapping("/submissions/{submissionId}/grade")
+    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ROLE_TEACHER')")
+    public ResponseEntity<?> gradeSubmission(
+            @PathVariable Long submissionId,
+            @RequestBody Map<String, Object> payload) {
+        try {
+            AssignmentSubmission submission = submissionRepository.findById(submissionId).orElse(null);
+            if (submission == null) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", "Submission not found with ID: " + submissionId));
+            }
+
+            if (payload.get("marksObtained") != null) {
+                submission.setMarksObtained(Double.parseDouble(payload.get("marksObtained").toString()));
+            }
+            if (payload.get("feedback") != null) {
+                submission.setFeedback(payload.get("feedback").toString());
+            }
+            submission.setStatus(AssignmentStatus.GRADED);
+
+            AssignmentSubmission saved = submissionRepository.save(submission);
+            return ResponseEntity.ok(Map.of(
+                    "message", "Submission graded successfully!",
+                    "submissionId", saved.getId(),
+                    "marksObtained", saved.getMarksObtained() != null ? saved.getMarksObtained() : 0,
+                    "feedback", saved.getFeedback() != null ? saved.getFeedback() : "",
+                    "status", saved.getStatus().name()
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("message", "Failed to grade submission: " + e.getMessage()));
+        }
     }
 
     @GetMapping("/{id}/my-submission")

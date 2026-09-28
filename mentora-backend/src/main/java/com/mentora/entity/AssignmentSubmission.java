@@ -1,10 +1,12 @@
 package com.mentora.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "assignment_submissions")
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 public class AssignmentSubmission {
 
     @Id

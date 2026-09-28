@@ -1,9 +1,22 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import api, { getApiErrorMessage } from '../../services/api';
-import { FileCheck, Calendar, Upload, Plus, Clock, Send, Trash2, ShieldAlert, X } from 'lucide-react';
+import { FileCheck, Calendar, Upload, Plus, Clock, Send, Trash2, ShieldAlert, X, Users, Download, Award, CheckCircle2, MessageSquare, ExternalLink } from 'lucide-react';
 import { Assignment } from '../../types';
 import { useAuth } from '../../context/AuthContext';
 import { DeleteConfirmModal } from '../../components/common/DeleteConfirmModal';
+
+interface StudentSubmission {
+  id: number;
+  studentId: number;
+  studentName: string;
+  studentEmail: string;
+  rollNumber: string;
+  fileUrl: string;
+  submittedAt: string;
+  marksObtained: number | null;
+  feedback: string | null;
+  status: string;
+}
 
 export const AssignmentsPage: React.FC = () => {
   const { user } = useAuth();
@@ -26,6 +39,19 @@ export const AssignmentsPage: React.FC = () => {
   const [submissionSuccess, setSubmissionSuccess] = useState<string | null>(null);
   const [submissionError, setSubmissionError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Teacher View Submissions Modal State
+  const [viewingAssignment, setViewingAssignment] = useState<Assignment | null>(null);
+  const [submissionsList, setSubmissionsList] = useState<StudentSubmission[]>([]);
+  const [loadingSubmissions, setLoadingSubmissions] = useState(false);
+  const [submissionsError, setSubmissionsError] = useState<string | null>(null);
+
+  // Teacher Grading State
+  const [gradingId, setGradingId] = useState<number | null>(null);
+  const [marksInput, setMarksInput] = useState<string>('');
+  const [feedbackInput, setFeedbackInput] = useState<string>('');
+  const [gradingLoading, setGradingLoading] = useState(false);
+  const [gradingMessage, setGradingMessage] = useState<{ id: number; text: string; error?: boolean } | null>(null);
 
   // Custom Delete Modal State
   const [deleteItem, setDeleteItem] = useState<{ id: number; title: string } | null>(null);
@@ -107,7 +133,7 @@ export const AssignmentsPage: React.FC = () => {
     }
   };
 
-  // FIXED MAJOR-8: Submit solution to backend with file upload support
+  // Submit solution to backend with file upload support
   const handleSubmitSolution = async () => {
     if (!selectedAssignment) return;
     try {
@@ -147,12 +173,62 @@ export const AssignmentsPage: React.FC = () => {
     }
   };
 
+  // Open Teacher Submissions Viewer
+  const handleOpenSubmissions = async (assignment: Assignment) => {
+    setViewingAssignment(assignment);
+    setSubmissionsError(null);
+    setGradingId(null);
+    setGradingMessage(null);
+    try {
+      setLoadingSubmissions(true);
+      const res = await api.get(`/assignments/${assignment.id}/submissions`);
+      setSubmissionsList(res.data || []);
+    } catch (err: any) {
+      console.error('Failed to load submissions:', err);
+      setSubmissionsError(getApiErrorMessage(err) || 'Could not load student submissions.');
+    } finally {
+      setLoadingSubmissions(false);
+    }
+  };
+
+  // Submit Grade / Feedback for a submission
+  const handleGradeSubmission = async (submissionId: number) => {
+    if (marksInput === '') return;
+    try {
+      setGradingLoading(true);
+      setGradingMessage(null);
+      await api.put(`/assignments/submissions/${submissionId}/grade`, {
+        marksObtained: parseFloat(marksInput),
+        feedback: feedbackInput,
+      });
+
+      setSubmissionsList(prev =>
+        prev.map(sub =>
+          sub.id === submissionId
+            ? { ...sub, marksObtained: parseFloat(marksInput), feedback: feedbackInput, status: 'GRADED' }
+            : sub
+        )
+      );
+
+      setGradingMessage({ id: submissionId, text: 'Marks saved successfully!' });
+      setTimeout(() => {
+        setGradingId(null);
+        setGradingMessage(null);
+      }, 2000);
+    } catch (err: any) {
+      console.error('Failed to save grade:', err);
+      setGradingMessage({ id: submissionId, text: getApiErrorMessage(err) || 'Failed to save grade.', error: true });
+    } finally {
+      setGradingLoading(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h2 className="text-xl font-bold">Academic Assignments</h2>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Real-time assignment creation, solution submissions, and assignment deletion</p>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Real-time assignment creation, student solution submissions, and teacher evaluations</p>
         </div>
         {isTeacherOrAdmin && (
           <button
@@ -184,15 +260,15 @@ export const AssignmentsPage: React.FC = () => {
                     Max Marks: {item.maxMarks}
                   </span>
                 </div>
-                <h3 className="font-bold text-base text-slate-900">{item.title}</h3>
-                <p className="text-xs text-slate-600 leading-relaxed">{item.description}</p>
+                <h3 className="font-bold text-base text-slate-900 dark:text-white">{item.title}</h3>
+                <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">{item.description}</p>
               </div>
               <div className="flex flex-col md:items-end space-y-2">
                 <span className="text-xs text-slate-400 flex items-center space-x-1">
                   <Clock className="w-3.5 h-3.5 text-amber-500" />
                   <span>Due: {item.dueDate}</span>
                 </span>
-                <div className="flex space-x-2">
+                <div className="flex items-center space-x-2">
                   {!isTeacherOrAdmin && (
                     <button
                       onClick={() => setSelectedAssignment(item)}
@@ -203,13 +279,23 @@ export const AssignmentsPage: React.FC = () => {
                     </button>
                   )}
                   {isTeacherOrAdmin && (
-                    <button
-                      onClick={() => { setDeleteItem({ id: item.id, title: item.title }); setDeleteError(null); }}
-                      className="p-2 bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 rounded-xl transition-colors cursor-pointer"
-                      title="Delete Assignment"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
+                    <>
+                      <button
+                        onClick={() => handleOpenSubmissions(item)}
+                        className="px-3.5 py-2 bg-brand-50 hover:bg-brand-100 text-brand-700 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-brand-400 rounded-xl text-xs font-semibold flex items-center space-x-1.5 border border-brand-200 dark:border-slate-700 transition-colors cursor-pointer"
+                        title="View Submitted Solutions"
+                      >
+                        <Users className="w-4 h-4 text-brand-600 dark:text-brand-400" />
+                        <span>Submissions</span>
+                      </button>
+                      <button
+                        onClick={() => { setDeleteItem({ id: item.id, title: item.title }); setDeleteError(null); }}
+                        className="p-2 bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 rounded-xl transition-colors cursor-pointer"
+                        title="Delete Assignment"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </>
                   )}
                 </div>
               </div>
@@ -294,7 +380,7 @@ export const AssignmentsPage: React.FC = () => {
         </div>
       )}
 
-      {/* Student Submission Modal — FIXED MAJOR-8 */}
+      {/* Student Submission Modal */}
       {selectedAssignment && (
         <div className="fixed inset-0 bg-slate-950/70 backdrop-blur-sm flex items-center justify-center p-4 z-50">
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 max-w-lg w-full space-y-4">
@@ -366,7 +452,211 @@ export const AssignmentsPage: React.FC = () => {
         </div>
       )}
 
-      {/* Sleek Middle-of-Screen Delete Confirmation Modal */}
+      {/* Teacher Submissions Viewer Modal */}
+      {viewingAssignment && (
+        <div className="fixed inset-0 bg-slate-950/70 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl max-w-3xl w-full max-h-[85vh] flex flex-col shadow-2xl">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between p-5 border-b border-slate-200 dark:border-slate-800">
+              <div className="space-y-1">
+                <div className="flex items-center space-x-2">
+                  <h3 className="text-base font-bold text-slate-900 dark:text-white">Submissions: {viewingAssignment.title}</h3>
+                  <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-brand-50 text-brand-700 dark:bg-brand-950/50 dark:text-brand-400 border border-brand-200 dark:border-brand-800">
+                    {submissionsList.length} Submitted
+                  </span>
+                </div>
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  Max Marks: <span className="font-semibold text-slate-700 dark:text-slate-300">{viewingAssignment.maxMarks}</span> | Due: {viewingAssignment.dueDate}
+                </p>
+              </div>
+              <button onClick={() => setViewingAssignment(null)} className="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-white rounded-lg">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-5 overflow-y-auto flex-1 space-y-4">
+              {submissionsError && (
+                <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-500 text-xs font-semibold flex items-center space-x-2">
+                  <ShieldAlert className="w-4 h-4 shrink-0" />
+                  <span>{submissionsError}</span>
+                </div>
+              )}
+
+              {loadingSubmissions ? (
+                <div className="py-12 text-center text-xs text-slate-400">Loading student submissions...</div>
+              ) : submissionsList.length === 0 ? (
+                <div className="py-12 text-center space-y-2">
+                  <FileCheck className="w-10 h-10 text-slate-300 dark:text-slate-600 mx-auto" />
+                  <h4 className="text-sm font-semibold text-slate-700 dark:text-slate-300">No Submissions Yet</h4>
+                  <p className="text-xs text-slate-400">Students have not submitted any solutions for this assignment yet.</p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {submissionsList.map((sub) => (
+                    <div
+                      key={sub.id}
+                      className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/40 space-y-3"
+                    >
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                        <div>
+                          <div className="flex items-center space-x-2">
+                            <span className="font-bold text-sm text-slate-900 dark:text-white">{sub.studentName}</span>
+                            {sub.rollNumber && (
+                              <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300">
+                                {sub.rollNumber}
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-xs text-slate-500 dark:text-slate-400">{sub.studentEmail}</p>
+                        </div>
+
+                        <div className="flex items-center space-x-2">
+                          <span className="text-[11px] text-slate-400 flex items-center space-x-1">
+                            <Clock className="w-3.5 h-3.5 text-slate-400" />
+                            <span>{sub.submittedAt ? new Date(sub.submittedAt).toLocaleString() : 'Submitted'}</span>
+                          </span>
+                          <span
+                            className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
+                              sub.status === 'GRADED'
+                                ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800'
+                                : 'bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-400 border border-amber-200 dark:border-amber-800'
+                            }`}
+                          >
+                            {sub.status === 'GRADED' ? `Graded: ${sub.marksObtained}/${viewingAssignment.maxMarks}` : 'Pending Evaluation'}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Student submission notes */}
+                      {sub.feedback && (
+                        <div className="p-3 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700/60 text-xs">
+                          <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1 flex items-center space-x-1">
+                            <MessageSquare className="w-3 h-3" />
+                            <span>Student Note</span>
+                          </div>
+                          <p className="text-slate-700 dark:text-slate-300 whitespace-pre-wrap">{sub.feedback}</p>
+                        </div>
+                      )}
+
+                      {/* File attachment & Grading actions */}
+                      <div className="flex flex-wrap items-center justify-between gap-2 pt-1 border-t border-slate-200/60 dark:border-slate-700/60">
+                        {sub.fileUrl && sub.fileUrl !== 'text_submission' ? (
+                          <a
+                            href={sub.fileUrl.startsWith('http') || sub.fileUrl.startsWith('/api') ? sub.fileUrl : `/api/v1/materials/files/${sub.fileUrl.replace('/uploads/', '')}`}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-100 text-xs font-semibold border border-emerald-200 dark:border-emerald-800/60 transition-colors"
+                          >
+                            <Download className="w-3.5 h-3.5" />
+                            <span>Download Solution ({sub.fileUrl.split('/').pop()})</span>
+                          </a>
+                        ) : (
+                          <span className="text-xs text-slate-400 italic">Text-only submission</span>
+                        )}
+
+                        <button
+                          onClick={() => {
+                            if (gradingId === sub.id) {
+                              setGradingId(null);
+                            } else {
+                              setGradingId(sub.id);
+                              setMarksInput(sub.marksObtained != null ? String(sub.marksObtained) : '');
+                              setFeedbackInput(sub.feedback || '');
+                              setGradingMessage(null);
+                            }
+                          }}
+                          className="px-3 py-1.5 rounded-lg bg-brand-50 hover:bg-brand-100 text-brand-700 dark:bg-slate-700 dark:text-brand-300 text-xs font-semibold flex items-center space-x-1 border border-brand-200 dark:border-slate-600 transition-colors cursor-pointer"
+                        >
+                          <Award className="w-3.5 h-3.5" />
+                          <span>{gradingId === sub.id ? 'Close Grading' : sub.status === 'GRADED' ? 'Edit Grade' : 'Grade Solution'}</span>
+                        </button>
+                      </div>
+
+                      {/* Inline Evaluation Panel */}
+                      {gradingId === sub.id && (
+                        <div className="p-3.5 rounded-xl bg-white dark:bg-slate-900 border border-brand-200 dark:border-brand-800 space-y-3 mt-2">
+                          <h5 className="text-xs font-bold text-brand-800 dark:text-brand-300 flex items-center space-x-1.5">
+                            <Award className="w-3.5 h-3.5" />
+                            <span>Grade & Evaluation Feedback</span>
+                          </h5>
+
+                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                            <div>
+                              <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-400 mb-1">
+                                Marks Obtained (Max {viewingAssignment.maxMarks})
+                              </label>
+                              <input
+                                type="number"
+                                min="0"
+                                max={viewingAssignment.maxMarks}
+                                value={marksInput}
+                                onChange={(e) => setMarksInput(e.target.value)}
+                                placeholder={`0 - ${viewingAssignment.maxMarks}`}
+                                className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-2.5 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-brand-500"
+                              />
+                            </div>
+
+                            <div className="sm:col-span-2">
+                              <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-400 mb-1">
+                                Evaluator Feedback
+                              </label>
+                              <input
+                                type="text"
+                                value={feedbackInput}
+                                onChange={(e) => setFeedbackInput(e.target.value)}
+                                placeholder="e.g. Excellent methodology, clean logic!"
+                                className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-2.5 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-brand-500"
+                              />
+                            </div>
+                          </div>
+
+                          {gradingMessage && gradingMessage.id === sub.id && (
+                            <div className={`p-2 rounded-lg text-xs font-semibold ${gradingMessage.error ? 'bg-rose-50 text-rose-600 border border-rose-200' : 'bg-emerald-50 text-emerald-600 border border-emerald-200'}`}>
+                              {gradingMessage.text}
+                            </div>
+                          )}
+
+                          <div className="flex justify-end space-x-2 pt-1">
+                            <button
+                              type="button"
+                              onClick={() => setGradingId(null)}
+                              className="px-3 py-1.5 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-lg text-xs font-semibold"
+                            >
+                              Cancel
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleGradeSubmission(sub.id)}
+                              disabled={gradingLoading || marksInput === ''}
+                              className="px-3.5 py-1.5 bg-brand-600 hover:bg-brand-700 text-white rounded-lg text-xs font-semibold flex items-center space-x-1.5 cursor-pointer disabled:opacity-50"
+                            >
+                              <CheckCircle2 className="w-3.5 h-3.5" />
+                              <span>{gradingLoading ? 'Saving...' : 'Save Evaluation'}</span>
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="p-4 border-t border-slate-200 dark:border-slate-800 flex justify-end">
+              <button
+                onClick={() => setViewingAssignment(null)}
+                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 rounded-xl text-xs font-semibold transition-colors"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
       <DeleteConfirmModal
         isOpen={deleteItem !== null}
         title="Delete Academic Assignment"
