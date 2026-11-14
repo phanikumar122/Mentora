@@ -46,11 +46,13 @@ public class AttendanceController {
     }
 
     @GetMapping("/student/{studentId}")
+    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ROLE_TEACHER')")
     public ResponseEntity<List<Attendance>> getStudentAttendance(@PathVariable Long studentId) {
         return ResponseEntity.ok(attendanceRepository.findByStudentIdOrderByDateDesc(studentId));
     }
 
     @GetMapping("/subject/{subjectId}")
+    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ROLE_TEACHER')")
     public ResponseEntity<List<Attendance>> getSubjectAttendance(
             @PathVariable Long subjectId,
             @RequestParam(required = false) String date) {

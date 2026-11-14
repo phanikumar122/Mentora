@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { CalendarCheck, Flame, Award, TrendingUp, Info } from 'lucide-react';
+import { CalendarCheck, Flame, TrendingUp, Info } from 'lucide-react';
 
 export interface HeatmapDay {
   date: string; // YYYY-MM-DD

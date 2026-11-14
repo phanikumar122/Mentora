@@ -16,7 +16,6 @@ import {
   GraduationCap,
   MessageSquare,
   CalendarCheck,
-  Sparkles,
 } from 'lucide-react';
 import { Subject, Assignment } from '../../types';
 
@@ -39,7 +38,6 @@ export const TeacherDashboard: React.FC = () => {
 
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [assignments, setAssignments] = useState<Assignment[]>([]);
-  const [totalStudents, setTotalStudents] = useState<number>(0);
   const [myAdvisees, setMyAdvisees] = useState<AdviseeStudent[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -75,7 +73,6 @@ export const TeacherDashboard: React.FC = () => {
       setAssignments(assRes.data || []);
       const advisees = advRes.data || [];
       setMyAdvisees(advisees);
-      setTotalStudents(advisees.length);
     } catch (err) {
       console.error('Error loading teacher dashboard data:', err);
     } finally {

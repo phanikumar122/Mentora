@@ -10,6 +10,9 @@ import {
   Eye,
   EyeOff,
   GraduationCap,
+  CalendarCheck,
+  MessagesSquare,
+  FileCheck,
 } from 'lucide-react';
 import { Role } from '../../types';
 
@@ -79,11 +82,24 @@ export const Login: React.FC = () => {
             {/* Hero Copy */}
             <div className="space-y-4">
               <h2 className="text-3xl font-extrabold text-white leading-snug font-display tracking-tight">
-                Empowering Students, Faculty & Parents.
+                One campus workspace. Every academic moment.
               </h2>
               <p className="text-xs text-emerald-100/90 leading-relaxed">
-                Streamline attendance density analytics, coursework lifecycle management, faculty mentorship, and official campus broadcasts.
+                Move from coursework to mentoring without switching systems. Mentora keeps the academic community informed, accountable and connected.
               </p>
+            </div>
+
+            <div className="grid grid-cols-1 gap-3">
+              {[
+                { icon: FileCheck, label: 'Coursework & grading' },
+                { icon: CalendarCheck, label: 'Attendance insight' },
+                { icon: MessagesSquare, label: 'Mentor communication' },
+              ].map(({ icon: Icon, label }) => (
+                <div key={label} className="flex items-center gap-3 rounded-xl border border-white/10 bg-white/[0.06] px-3.5 py-3 text-xs font-semibold text-emerald-50">
+                  <Icon className="h-4 w-4 text-emerald-300" />
+                  <span>{label}</span>
+                </div>
+              ))}
             </div>
           </div>
         </div>
@@ -91,7 +107,8 @@ export const Login: React.FC = () => {
         {/* Right Side: Authentication Form */}
         <div className="lg:col-span-7 p-8 sm:p-12 flex flex-col justify-center space-y-6 bg-white">
           <div className="space-y-2">
-            <h3 className="text-3xl font-bold text-slate-900 tracking-tight font-display">Sign In to Your Workspace</h3>
+            <span className="hero-eyebrow">Secure institutional access</span>
+            <h3 className="text-3xl font-bold text-slate-900 tracking-tight font-display">Welcome back to Mentora</h3>
             <p className="text-xs text-slate-500">
               Please enter your institutional email and account password to proceed.
             </p>

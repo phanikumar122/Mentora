@@ -5,8 +5,6 @@ import {
   Users,
   UserPlus,
   Shield,
-  Mail,
-  Phone,
   Search,
   CheckCircle,
   Trash2,
@@ -17,9 +15,7 @@ import {
   GraduationCap,
   Unlink,
   UserX,
-  Filter,
   Briefcase,
-  UserCheck2,
 } from 'lucide-react';
 import { User, Role } from '../../types';
 import { DeleteConfirmModal } from '../../components/common/DeleteConfirmModal';

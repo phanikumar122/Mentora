@@ -6,7 +6,7 @@ export const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ child
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#f8fafc]">
+    <div className="min-h-screen flex flex-col bg-[#f4f7f6]">
       {/* Fixed Top Navbar (h-16 / 64px) */}
       <Navbar onToggleSidebar={() => setMobileSidebarOpen((prev) => !prev)} />
 
@@ -16,8 +16,8 @@ export const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ child
         <Sidebar isOpen={mobileSidebarOpen} onClose={() => setMobileSidebarOpen(false)} />
 
         {/* Scrollable Page Main Body */}
-        <main className="flex-1 overflow-y-auto overflow-x-hidden min-w-0 max-w-full bg-[#f8fafc]">
-          <div className="w-full max-w-[1360px] mx-auto p-3.5 sm:p-6 md:p-8 space-y-5">
+        <main className="workspace-canvas flex-1 overflow-y-auto overflow-x-hidden min-w-0 max-w-full">
+          <div className="w-full max-w-[1360px] mx-auto p-3.5 sm:p-6 md:p-8 space-y-5 relative z-10">
             {children}
           </div>
         </main>

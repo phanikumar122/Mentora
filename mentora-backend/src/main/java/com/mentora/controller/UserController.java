@@ -1,6 +1,7 @@
 package com.mentora.controller;
 
 import com.mentora.dto.UserDto;
+import com.mentora.dto.ChangePasswordRequest;
 import com.mentora.entity.Parent;
 import com.mentora.entity.Role;
 import com.mentora.entity.Student;
@@ -12,8 +13,10 @@ import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
+import jakarta.validation.Valid;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -38,6 +41,7 @@ public class UserController {
     private final DiscussionPostRepository discussionPostRepository;
     private final DiscussionReplyRepository discussionReplyRepository;
     private final AnnouncementRepository announcementRepository;
+    private final PasswordEncoder passwordEncoder;
 
     public UserController(UserRepository userRepository,
                           StudentRepository studentRepository,
@@ -52,7 +56,8 @@ public class UserController {
                           ChatMessageRepository chatMessageRepository,
                           DiscussionPostRepository discussionPostRepository,
                           DiscussionReplyRepository discussionReplyRepository,
-                          AnnouncementRepository announcementRepository) {
+                          AnnouncementRepository announcementRepository,
+                          PasswordEncoder passwordEncoder) {
         this.userRepository = userRepository;
         this.studentRepository = studentRepository;
         this.teacherRepository = teacherRepository;
@@ -67,6 +72,7 @@ public class UserController {
         this.discussionPostRepository = discussionPostRepository;
         this.discussionReplyRepository = discussionReplyRepository;
         this.announcementRepository = announcementRepository;
+        this.passwordEncoder = passwordEncoder;
     }
 
     @GetMapping("/me")
@@ -82,6 +88,25 @@ public class UserController {
                 .profilePictureUrl(user.getProfilePictureUrl())
                 .isEnabled(user.getIsEnabled())
                 .build());
+    }
+
+    @PutMapping("/me/password")
+    public ResponseEntity<?> changePassword(
+            @Valid @RequestBody ChangePasswordRequest request,
+            Authentication authentication) {
+        User user = userRepository.findByEmailIgnoreCase(authentication.getName())
+                .orElseThrow(() -> new NoSuchElementException("Authenticated user account was not found."));
+
+        if (!passwordEncoder.matches(request.getCurrentPassword(), user.getPassword())) {
+            return ResponseEntity.status(400).body(Map.of("message", "Current password is incorrect."));
+        }
+        if (request.getCurrentPassword().equals(request.getNewPassword())) {
+            return ResponseEntity.badRequest().body(Map.of("message", "New password must be different from the current password."));
+        }
+
+        user.setPassword(passwordEncoder.encode(request.getNewPassword()));
+        userRepository.save(user);
+        return ResponseEntity.ok(Map.of("message", "Password changed successfully. Sign in again with your new password."));
     }
 
     @GetMapping("/directory")

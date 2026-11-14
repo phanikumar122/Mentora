@@ -40,12 +40,9 @@ public class AnnouncementController {
     public ResponseEntity<Announcement> createAnnouncement(
             @RequestBody Announcement announcement,
             Authentication authentication) {
-        if (authentication != null && authentication.getName() != null) {
-            User author = userRepository.findByEmail(authentication.getName()).orElse(null);
-            if (author != null) {
-                announcement.setAuthor(author);
-            }
-        }
+        User author = userRepository.findByEmailIgnoreCase(authentication.getName())
+                .orElseThrow(() -> new IllegalArgumentException("Authenticated user account was not found."));
+        announcement.setAuthor(author);
         return ResponseEntity.ok(announcementRepository.save(announcement));
     }
 

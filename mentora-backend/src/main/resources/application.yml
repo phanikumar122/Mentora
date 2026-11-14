@@ -15,24 +15,20 @@ spring:
       max-file-size: 50MB
       max-request-size: 50MB
   datasource:
-    # TiDB Cloud Serverless (MySQL-compatible)
-    # SECURITY: Credentials loaded from environment variables (MENTORA_DB_URL, MENTORA_DB_USER, MENTORA_DB_PASS)
-    # Fallback to local dev values only — never hardcode production credentials here.
-    url: ${MENTORA_DB_URL:jdbc:mysql://gateway01.ap-southeast-1.prod.aws.tidbcloud.com:4000/mentora?sslMode=REQUIRED&enabledTLSProtocols=TLSv1.2,TLSv1.3&allowPublicKeyRetrieval=true}
-    driver-class-name: com.mysql.cj.jdbc.Driver
-    username: ${MENTORA_DB_USER:3Q9njwBTT5gHaSW.root}
-    password: ${MENTORA_DB_PASS:Fj7IWdxW7C2v5xNq}
-    # HikariCP connection pool — BUG FIX: reduce maxLifetime below TiDB's 5-min server timeout
-    # to prevent "connection closed" validation failures on idle connections
+    # Local development is self-contained. Production overrides this in application-prod.yml.
+    url: jdbc:h2:mem:mentoradb;MODE=MySQL;DB_CLOSE_DELAY=-1;DATABASE_TO_LOWER=TRUE
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
     hikari:
       maximum-pool-size: 10
       minimum-idle: 2
-      idle-timeout: 120000          # 2 minutes
-      max-lifetime: 180000          # 3 minutes (< TiDB's ~5 min server timeout)
-      connection-timeout: 30000     # 30 seconds
-      keepalive-time: 60000         # ping every 60s to keep connection alive
-      connection-test-query: SELECT 1
+      connection-timeout: 30000
+  h2:
+    console:
+      enabled: true
   jpa:
+    open-in-view: false
     hibernate:
       ddl-auto: update
     show-sql: false
@@ -48,9 +44,12 @@ mentora:
     jwtSecret: ${MENTORA_JWT_SECRET:404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970}
     jwtExpirationMs: 86400000 # 24 hours
   cors:
-    # Allowed origins for frontend local and cloud deployments (* allows all domains including Vercel/Netlify)
-    allowed-origins: ${MENTORA_CORS_ORIGINS:*}
-
+    allowed-origins: ${MENTORA_CORS_ORIGINS:http://localhost:3000}
+  bootstrap:
+    admin:
+      enabled: ${MENTORA_BOOTSTRAP_ADMIN_ENABLED:true}
+      email: ${MENTORA_BOOTSTRAP_ADMIN_EMAIL:admin@mentora.com}
+      password: ${MENTORA_BOOTSTRAP_ADMIN_PASSWORD:admin@mentora}
 # SpringDoc OpenAPI Documentation
 springdoc:
   api-docs:

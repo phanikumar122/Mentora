@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import api, { getApiErrorMessage } from '../../services/api';
-import { FileCheck, Calendar, Upload, Plus, Clock, Send, Trash2, ShieldAlert, X, Users, Download, Award, CheckCircle2, MessageSquare, ExternalLink } from 'lucide-react';
+import { FileCheck, Upload, Plus, Clock, Send, Trash2, ShieldAlert, X, Users, Download, Award, CheckCircle2, MessageSquare } from 'lucide-react';
 import { Assignment } from '../../types';
 import { useAuth } from '../../context/AuthContext';
 import { DeleteConfirmModal } from '../../components/common/DeleteConfirmModal';

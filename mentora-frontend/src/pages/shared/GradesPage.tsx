@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import api from '../../services/api';
-import { Award, BookOpen, Calculator } from 'lucide-react';
+import { BookOpen } from 'lucide-react';
 import { Course } from '../../types';
 
 export const GradesPage: React.FC = () => {

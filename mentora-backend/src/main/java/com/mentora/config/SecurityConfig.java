@@ -56,14 +56,14 @@ public class SecurityConfig {
 
     @Bean
     public PasswordEncoder passwordEncoder() {
-        return new com.mentora.security.HybridPasswordEncoder();
+        return new BCryptPasswordEncoder();
     }
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http.cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .csrf(AbstractHttpConfigurer::disable)
-                .headers(headers -> headers.frameOptions(frame -> frame.disable()))
+                .headers(headers -> headers.frameOptions(frame -> frame.sameOrigin()))
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .exceptionHandling(exceptions -> exceptions
                         .authenticationEntryPoint((request, response, authException) -> {
@@ -83,10 +83,8 @@ public class SecurityConfig {
                                 .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                                 // Allow health check monitoring probes publicly (UptimeRobot, Render, etc.)
                                 .requestMatchers("/health", "/health/**", "/api/v1/health", "/api/v1/health/**").permitAll()
-                                // Allow login & registration publicly
-                                .requestMatchers("/api/v1/auth/**").permitAll()
-                                // Allow study material file downloads publicly
-                                .requestMatchers(HttpMethod.GET, "/api/v1/materials/files/**", "/api/v1/materials/*/download").permitAll()
+                                // Authentication is public only for sign-in. Account creation is admin-governed.
+                                .requestMatchers(HttpMethod.POST, "/api/v1/auth/login").permitAll()
                                 // Allow H2 console, Swagger docs publicly
                                 .requestMatchers("/h2-console/**").permitAll()
                                 .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
@@ -122,7 +120,7 @@ public class SecurityConfig {
 
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
         configuration.setAllowedHeaders(List.of("*"));
-        configuration.setExposedHeaders(List.of("*"));
+        configuration.setExposedHeaders(List.of("Content-Disposition"));
         configuration.setAllowCredentials(true);
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);

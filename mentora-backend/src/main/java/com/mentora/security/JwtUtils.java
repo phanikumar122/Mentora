@@ -26,8 +26,7 @@ public class JwtUtils {
             byte[] keyBytes = digest.digest(jwtSecret.getBytes(StandardCharsets.UTF_8));
             return Keys.hmacShaKeyFor(keyBytes);
         } catch (Exception e) {
-            byte[] fallback = new byte[32];
-            return Keys.hmacShaKeyFor(fallback);
+            throw new IllegalStateException("Unable to initialize JWT signing key", e);
         }
     }
 

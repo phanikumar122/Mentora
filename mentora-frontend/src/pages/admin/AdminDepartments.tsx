@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import api, { getApiErrorMessage } from '../../services/api';
-import { Building2, Plus, BookOpen, Send, X, Trash2, CheckCircle2, ShieldAlert } from 'lucide-react';
+import { Building2, Plus, BookOpen, Trash2, CheckCircle2, ShieldAlert } from 'lucide-react';
 import { Department, Course } from '../../types';
 import { DeleteConfirmModal } from '../../components/common/DeleteConfirmModal';
 

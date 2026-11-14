@@ -1,9 +1,7 @@
-import React, { useState, useEffect } from 'react';
-import { useAuth } from '../../context/AuthContext';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../../services/api';
 import {
-  ShieldCheck,
   Users,
   Building2,
   Database,
@@ -13,27 +11,18 @@ import {
   Server,
   Layers,
   CheckCircle2,
-  Download,
-  Terminal,
 } from 'lucide-react';
-
-interface AuditLog {
-  id: string | number;
-  action: string;
-  detail: string;
-  time: string;
-  type?: 'SYSTEM' | 'SUCCESS' | 'BACKUP' | 'REPORT';
-}
 
 import { getAuditLogs, addAuditLog, AuditLogItem } from '../../services/auditService';
 
 export const AdminDashboard: React.FC = () => {
-  const { user } = useAuth();
   const navigate = useNavigate();
 
   const [usersCount, setUsersCount] = useState<number>(0);
   const [departmentsCount, setDepartmentsCount] = useState<number>(0);
   const [coursesCount, setCoursesCount] = useState<number>(0);
+  const [serviceHealth, setServiceHealth] = useState<'UP' | 'DEGRADED' | 'UNKNOWN'>('UNKNOWN');
+  const [uptimeSeconds, setUptimeSeconds] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isBackingUp, setIsBackingUp] = useState(false);
@@ -41,12 +30,12 @@ export const AdminDashboard: React.FC = () => {
 
   const [auditLogs, setAuditLogs] = useState<AuditLogItem[]>(getAuditLogs());
 
-  const showToast = (msg: string) => {
+  const showToast = useCallback((msg: string) => {
     setToastMessage(msg);
     setTimeout(() => {
       setToastMessage((current) => (current === msg ? null : current));
     }, 4000);
-  };
+  }, []);
 
   const loadLogs = () => {
     setAuditLogs(getAuditLogs());
@@ -61,15 +50,16 @@ export const AdminDashboard: React.FC = () => {
     };
   }, []);
 
-  const fetchAdminStats = async (isManualRefresh = false) => {
+  const fetchAdminStats = useCallback(async (isManualRefresh = false) => {
     try {
       if (isManualRefresh) setIsRefreshing(true);
       else setLoading(true);
 
-      const [uRes, dRes, cRes] = await Promise.all([
+      const [uRes, dRes, cRes, healthRes] = await Promise.all([
         api.get('/users').catch(() => ({ data: [] })),
         api.get('/departments').catch(() => ({ data: [] })),
         api.get('/courses').catch(() => ({ data: [] })),
+        api.get('/health').catch(() => ({ data: null })),
       ]);
 
       const uCount = (uRes.data || []).length;
@@ -79,6 +69,8 @@ export const AdminDashboard: React.FC = () => {
       setUsersCount(uCount);
       setDepartmentsCount(dCount);
       setCoursesCount(cCount);
+      setServiceHealth(healthRes.data?.database === 'UP' ? 'UP' : healthRes.data ? 'DEGRADED' : 'UNKNOWN');
+      setUptimeSeconds(typeof healthRes.data?.uptimeSeconds === 'number' ? healthRes.data.uptimeSeconds : null);
 
       if (isManualRefresh) {
         addAuditLog({
@@ -94,25 +86,25 @@ export const AdminDashboard: React.FC = () => {
       setLoading(false);
       setIsRefreshing(false);
     }
-  };
+  }, [showToast]);
 
   useEffect(() => {
     fetchAdminStats();
-  }, []);
+  }, [fetchAdminStats]);
 
   const handleBackupDatabase = () => {
     setIsBackingUp(true);
     setTimeout(() => {
       const backupData = {
         timestamp: new Date().toISOString(),
-        environment: 'Production',
-        status: 'VERIFIED_HEALTHY',
+        reportType: 'Mentora system inventory',
+        serviceHealth,
         entities: {
           usersCount,
           departmentsCount,
           coursesCount,
         },
-        engine: 'H2 / TiDB JPA Persistence Layer',
+        note: 'This inventory report contains aggregate counts only; it is not a database backup.',
       };
 
       const blob = new Blob([JSON.stringify(backupData, null, 2)], { type: 'application/json' });
@@ -124,13 +116,13 @@ export const AdminDashboard: React.FC = () => {
       URL.revokeObjectURL(url);
 
       addAuditLog({
-        action: 'Database Backup Exported',
-        detail: `Encrypted snapshot created containing ${usersCount} users, ${departmentsCount} departments & ${coursesCount} courses`,
+        action: 'System Inventory Exported',
+        detail: `Inventory report created for ${usersCount} users, ${departmentsCount} departments and ${coursesCount} courses`,
         type: 'BACKUP',
       });
 
       setIsBackingUp(false);
-      showToast('Database backup snapshot created and downloaded.');
+      showToast('System inventory report downloaded.');
     }, 800);
   };
 
@@ -140,8 +132,8 @@ export const AdminDashboard: React.FC = () => {
 MENTORA PLATFORM SYSTEM AUDIT DIAGNOSTIC REPORT
 =====================================================
 Generated At          : ${new Date().toLocaleString()}
-System Uptime         : 99.98%
-Database Engine Status: HEALTHY & ACTIVE
+Service Uptime        : ${uptimeSeconds !== null ? `${uptimeSeconds} seconds` : 'Unavailable'}
+Database Engine Status: ${serviceHealth}
 Registered Users      : ${usersCount}
 Active Departments    : ${departmentsCount}
 Offered Courses       : ${coursesCount}
@@ -229,10 +221,10 @@ ${logs.map((l, i) => `[${i + 1}] ${l.time} | ${l.action} - ${l.detail}`).join('\
             <Building2 className="w-6 h-6" />
           </div>
           <div>
-            <p className="metric-label">Active Departments</p>
-            <p className="metric-value">{loading ? '...' : departmentsCount}</p>
+            <p className="metric-label">Platform Health</p>
+            <p className="metric-value">{serviceHealth}</p>
             <span className="metric-sub text-emerald-600 dark:text-emerald-500">
-              Academic faculties
+              {uptimeSeconds !== null ? `${Math.floor(uptimeSeconds / 60)} minutes since restart` : 'Health data unavailable'}
             </span>
           </div>
         </div>
@@ -337,10 +329,10 @@ ${logs.map((l, i) => `[${i + 1}] ${l.time} | ${l.action} - ${l.detail}`).join('\
               </div>
               <div className="overflow-hidden">
                 <p className="font-bold text-xs text-slate-900 dark:text-white group-hover:text-emerald-700 dark:group-hover:text-emerald-400 transition-colors">
-                  {isBackingUp ? 'Creating Snapshot...' : 'Database Backup'}
+                  {isBackingUp ? 'Preparing Report...' : 'Export System Inventory'}
                 </p>
                 <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate">
-                  Export snapshot of H2 & JPA entities
+                  Download aggregate platform counts
                 </p>
               </div>
             </button>

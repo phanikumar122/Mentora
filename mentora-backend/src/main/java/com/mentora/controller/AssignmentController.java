@@ -139,7 +139,13 @@ public class AssignmentController {
             }
 
             if (payload.get("marksObtained") != null) {
-                submission.setMarksObtained(Double.parseDouble(payload.get("marksObtained").toString()));
+                double marks = Double.parseDouble(payload.get("marksObtained").toString());
+                int maximum = submission.getAssignment() != null && submission.getAssignment().getMaxMarks() != null
+                        ? submission.getAssignment().getMaxMarks() : 100;
+                if (marks < 0 || marks > maximum) {
+                    return ResponseEntity.badRequest().body(Map.of("message", "Marks must be between 0 and " + maximum + "."));
+                }
+                submission.setMarksObtained(marks);
             }
             if (payload.get("feedback") != null) {
                 submission.setFeedback(payload.get("feedback").toString());

@@ -16,7 +16,7 @@ import {
   CheckCheck,
   Search,
 } from 'lucide-react';
-import { User, Course } from '../../types';
+import { Course } from '../../types';
 import { AttendanceHeatmap, HeatmapDay } from '../../components/common/AttendanceHeatmap';
 
 interface AttendanceAnalytics {

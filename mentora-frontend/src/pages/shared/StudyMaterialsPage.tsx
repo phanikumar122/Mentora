@@ -36,8 +36,8 @@ export const StudyMaterialsPage: React.FC = () => {
         description: item.description,
         subjectName: item.subject ? item.subject.name : 'General Resources',
         materialType: item.materialType || 'DOCUMENT',
-        fileName: item.fileName || 'Resource_Document.pdf',
-        fileSize: item.fileSize || '2.4 MB',
+        fileName: item.fileName,
+        fileSize: item.fileSize,
         fileUrl: item.fileUrl,
         uploadedAt: item.uploadedAt ? new Date(item.uploadedAt).toLocaleDateString() : 'Recently',
       }));
@@ -59,15 +59,6 @@ export const StudyMaterialsPage: React.FC = () => {
     const sizes = ['Bytes', 'KB', 'MB', 'GB'];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
     return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
-  };
-
-  const readFileAsDataUrl = (file: File): Promise<string> => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(reader.result as string);
-      reader.onerror = reject;
-      reader.readAsDataURL(file);
-    });
   };
 
   const handleDownloadFile = async (item: StudyMaterial) => {

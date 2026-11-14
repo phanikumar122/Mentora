@@ -4,13 +4,10 @@ import { useNavigate } from 'react-router-dom';
 import api from '../../services/api';
 import {
   BookOpen,
-  CheckCircle2,
   FileText,
   MessageSquare,
   CalendarCheck,
   ShieldCheck,
-  HeartHandshake,
-  Sparkles,
   ChevronRight,
 } from 'lucide-react';
 import { Assignment } from '../../types';
@@ -38,7 +35,7 @@ export const ParentDashboard: React.FC = () => {
 
   const [ward, setWard] = useState<WardDetails | null>(null);
   const [assignments, setAssignments] = useState<Assignment[]>([]);
-  const [attendanceRate, setAttendanceRate] = useState<number>(95.4);
+  const [attendanceRate, setAttendanceRate] = useState<number | null>(null);
   const [heatmapData, setHeatmapData] = useState<HeatmapDay[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -111,7 +108,7 @@ export const ParentDashboard: React.FC = () => {
             <div className="p-4 rounded-2xl bg-[var(--bg-surface-elevated)] border border-[var(--border-subtle)] space-y-1">
               <span className="text-[10px] uppercase font-bold text-[var(--text-muted)]">Student Ward</span>
               <p className="font-bold text-sm text-[var(--text-primary)]">{ward.firstName} {ward.lastName}</p>
-              <p className="text-[11px] text-[var(--text-muted)] font-mono">{ward.rollNumber || 'STU-2026'}</p>
+              <p className="text-[11px] text-[var(--text-muted)] font-mono">{ward.rollNumber || 'Roll number pending'}</p>
             </div>
             <div className="p-4 rounded-2xl bg-[var(--bg-surface-elevated)] border border-[var(--border-subtle)] space-y-1">
               <span className="text-[10px] uppercase font-bold text-[var(--text-muted)]">Academic Department</span>
@@ -150,9 +147,9 @@ export const ParentDashboard: React.FC = () => {
           </div>
           <div>
             <p className="metric-label">Ward Attendance Rate</p>
-            <p className="metric-value">{attendanceRate.toFixed(1)}%</p>
+            <p className="metric-value">{attendanceRate !== null ? `${attendanceRate.toFixed(1)}%` : '—'}</p>
             <span className="metric-sub text-emerald-600 dark:text-emerald-500">
-              Above Compliance Threshold
+              {attendanceRate !== null ? 'Current recorded attendance' : 'No attendance recorded'}
             </span>
           </div>
         </div>
@@ -176,9 +173,9 @@ export const ParentDashboard: React.FC = () => {
           </div>
           <div>
             <p className="metric-label">Cumulative GPA</p>
-            <p className="metric-value">{ward?.cgpa ? ward.cgpa.toFixed(2) : '3.85'}</p>
+            <p className="metric-value">{ward?.cgpa != null ? ward.cgpa.toFixed(2) : '—'}</p>
             <span className="metric-sub text-amber-600 dark:text-amber-500">
-              High Distinction Grade
+              {ward?.cgpa != null ? 'Current cumulative result' : 'Awaiting published results'}
             </span>
           </div>
         </div>

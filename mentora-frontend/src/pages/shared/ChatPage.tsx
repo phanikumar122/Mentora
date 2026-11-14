@@ -1,16 +1,15 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import api from '../../services/api';
+import api, { API_BASE } from '../../services/api';
 import { Send, RefreshCw, MessageSquare, Zap, CheckCheck } from 'lucide-react';
 import { ChatMessage, User } from '../../types';
 import { Client } from '@stomp/stompjs';
 import SockJS from 'sockjs-client';
 
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8081/api/v1';
 const WS_BASE = API_BASE.replace('/api/v1', '');
 
 export const ChatPage: React.FC = () => {
-  const { user } = useAuth();
+  const { user, token } = useAuth();
   const [usersList, setUsersList] = useState<User[]>([]);
   const [activeContact, setActiveContact] = useState<User | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -18,6 +17,7 @@ export const ChatPage: React.FC = () => {
   const [loadingUsers, setLoadingUsers] = useState(true);
   const [loadingMessages, setLoadingMessages] = useState(false);
   const [isWsConnected, setIsWsConnected] = useState(false);
+  const [sendError, setSendError] = useState<string | null>(null);
 
   const stompClientRef = useRef<Client | null>(null);
   const activeContactRef = useRef<User | null>(null);
@@ -145,25 +145,14 @@ export const ChatPage: React.FC = () => {
     const stompUrl = `${WS_BASE}/ws-mentora`;
     const client = new Client({
       webSocketFactory: () => new SockJS(stompUrl),
+      connectHeaders: token ? { Authorization: `Bearer ${token}` } : {},
       reconnectDelay: 2500,
       heartbeatIncoming: 4000,
       heartbeatOutgoing: 4000,
       onConnect: () => {
         setIsWsConnected(true);
 
-        // Subscribe to direct user broadcast topic
-        client.subscribe(`/topic/user/${user.id}`, (stompMsg) => {
-          if (stompMsg.body) {
-            try {
-              const data = JSON.parse(stompMsg.body);
-              handleIncomingMessage(data);
-            } catch (e) {
-              console.warn('STOMP parse error:', e);
-            }
-          }
-        });
-
-        // Also subscribe to user queue
+        // Private queue bound to the JWT-authenticated STOMP principal.
         client.subscribe(`/user/queue/messages`, (stompMsg) => {
           if (stompMsg.body) {
             try {
@@ -198,10 +187,12 @@ export const ChatPage: React.FC = () => {
       if (stompClientRef.current) {
         try {
           stompClientRef.current.deactivate();
-        } catch (_) {}
+        } catch (error) {
+          console.warn('WebSocket cleanup error:', error);
+        }
       }
     };
-  }, [user?.id, fetchUsers, handleIncomingMessage]);
+  }, [user?.id, token, fetchUsers, handleIncomingMessage]);
 
   // When active contact changes, fetch their message history
   useEffect(() => {
@@ -218,6 +209,7 @@ export const ChatPage: React.FC = () => {
 
     const messageText = inputMessage.trim();
     setInputMessage('');
+    setSendError(null);
 
     // 1. Optimistic Instant UI Update (0ms latency for user)
     const tempId = `temp-${Date.now()}`;
@@ -235,7 +227,6 @@ export const ChatPage: React.FC = () => {
     // 2. Send to backend (saves + triggers real-time STOMP broadcast)
     try {
       const res = await api.post('/chat/messages', {
-        senderId: user.id,
         recipientId: activeContact.id,
         content: messageText,
       });
@@ -257,6 +248,10 @@ export const ChatPage: React.FC = () => {
       }
     } catch (err: any) {
       console.warn('Message post warning:', err);
+      setMessages((prev) => prev.filter((message) => message.id !== tempId));
+      setInputMessage(messageText);
+      setSendError(err.response?.data?.message || 'Message could not be sent. Check your connection and try again.');
+      inputRef.current?.focus();
     }
   };
 
@@ -441,6 +436,11 @@ export const ChatPage: React.FC = () => {
             </div>
 
             {/* Input Composer Form */}
+            {sendError && (
+              <div className="mx-3.5 mb-2 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-[11px] font-semibold text-rose-700">
+                {sendError}
+              </div>
+            )}
             <form
               onSubmit={handleSendMessage}
               className="p-3.5 border-t border-slate-200 bg-white flex items-center space-x-2"

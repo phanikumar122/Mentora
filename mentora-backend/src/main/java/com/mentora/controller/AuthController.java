@@ -12,6 +12,7 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
@@ -60,7 +61,12 @@ public class AuthController {
                         .body(java.util.Map.of("status", 401, "error", "Unauthorized", "message", "User account not found."));
             }
 
-            String roleName = user.getRole() != null ? user.getRole().name() : "ROLE_ADMIN";
+            if (user.getRole() == null) {
+                log.error("Login rejected because user {} has no assigned role", email);
+                return ResponseEntity.status(org.springframework.http.HttpStatus.FORBIDDEN)
+                        .body(java.util.Map.of("status", 403, "error", "Forbidden", "message", "This account has no assigned access role. Contact an administrator."));
+            }
+            String roleName = user.getRole().name();
 
             return ResponseEntity.ok(AuthResponse.builder()
                     .token(jwt)
@@ -82,23 +88,26 @@ public class AuthController {
                     .body(java.util.Map.of("status", 403, "error", "Forbidden", "message", "Your account is locked. Please contact your administrator."));
         } catch (org.springframework.security.core.AuthenticationException e) {
             return ResponseEntity.status(org.springframework.http.HttpStatus.UNAUTHORIZED)
-                    .body(java.util.Map.of("status", 401, "error", "Unauthorized", "message", "Authentication failed: " + e.getMessage()));
+                    .body(java.util.Map.of("status", 401, "error", "Unauthorized", "message", "Authentication failed. Please verify your credentials."));
         } catch (Exception e) {
             log.error("Unexpected error during login for user: {}", email, e);
             return ResponseEntity.status(org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(java.util.Map.of("status", 500, "error", "Internal Server Error", "message", "Login processing error: " + e.getMessage()));
+                    .body(java.util.Map.of("status", 500, "error", "Internal Server Error", "message", "Login could not be completed. Please try again."));
         }
     }
 
     // BUG-5 FIX: @Valid activates Jakarta validation constraints defined on RegisterRequest
     @PostMapping("/register")
+    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
     public ResponseEntity<?> registerUser(@Valid @RequestBody RegisterRequest registerRequest) {
-        if (userRepository.existsByEmail(registerRequest.getEmail())) {
-            return ResponseEntity.badRequest().body("Error: Email is already in use!");
+        String normalizedEmail = registerRequest.getEmail().trim().toLowerCase(java.util.Locale.ROOT);
+        if (userRepository.existsByEmailIgnoreCase(normalizedEmail)) {
+            return ResponseEntity.status(org.springframework.http.HttpStatus.CONFLICT)
+                    .body(java.util.Map.of("message", "An account with this email already exists."));
         }
 
         User user = User.builder()
-                .email(registerRequest.getEmail())
+                .email(normalizedEmail)
                 .password(passwordEncoder.encode(registerRequest.getPassword()))
                 .firstName(registerRequest.getFirstName())
                 .lastName(registerRequest.getLastName())
@@ -108,6 +117,7 @@ public class AuthController {
                 .build();
 
         userRepository.save(user);
-        return ResponseEntity.ok("User registered successfully!");
+        return ResponseEntity.status(org.springframework.http.HttpStatus.CREATED)
+                .body(java.util.Map.of("message", "User registered successfully!", "id", user.getId()));
     }
 }

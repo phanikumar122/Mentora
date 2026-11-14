@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useNavigate, useLocation } from 'react-router-dom';
+import api, { getApiErrorMessage } from '../../services/api';
 import {
   Bell,
   LogOut,
@@ -14,7 +15,7 @@ import {
   Mail,
   Phone,
   ShieldCheck,
-  CheckCircle2,
+  KeyRound,
 } from 'lucide-react';
 
 interface NavbarProps {
@@ -28,6 +29,11 @@ export const Navbar: React.FC<NavbarProps> = ({ onToggleSidebar }) => {
 
   const [showNotifications, setShowNotifications] = useState(false);
   const [showProfileDrawer, setShowProfileDrawer] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [passwordError, setPasswordError] = useState<string | null>(null);
+  const [passwordLoading, setPasswordLoading] = useState(false);
   const notifRef = useRef<HTMLDivElement>(null);
 
   // Generate clean breadcrumb title
@@ -75,6 +81,26 @@ export const Navbar: React.FC<NavbarProps> = ({ onToggleSidebar }) => {
   };
 
   const roleInfo = getRoleBadge(user?.role);
+
+  const handleChangePassword = async (event: React.FormEvent) => {
+    event.preventDefault();
+    setPasswordError(null);
+    if (newPassword !== confirmPassword) {
+      setPasswordError('New password and confirmation do not match.');
+      return;
+    }
+    try {
+      setPasswordLoading(true);
+      await api.put('/users/me/password', { currentPassword, newPassword });
+      setShowProfileDrawer(false);
+      logout();
+      navigate('/login', { replace: true });
+    } catch (error) {
+      setPasswordError(getApiErrorMessage(error));
+    } finally {
+      setPasswordLoading(false);
+    }
+  };
 
   return (
     <>
@@ -287,6 +313,56 @@ export const Navbar: React.FC<NavbarProps> = ({ onToggleSidebar }) => {
                   </div>
                 </div>
               </div>
+
+              <form onSubmit={handleChangePassword} className="space-y-3 border-t border-slate-200 pt-5">
+                <div className="flex items-center gap-2">
+                  <KeyRound className="h-4 w-4 text-emerald-700" />
+                  <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Change password</p>
+                </div>
+                {passwordError && (
+                  <div className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-[11px] font-semibold text-rose-700">
+                    {passwordError}
+                  </div>
+                )}
+                <input
+                  type="password"
+                  value={currentPassword}
+                  onChange={(event) => setCurrentPassword(event.target.value)}
+                  placeholder="Current password"
+                  autoComplete="current-password"
+                  required
+                  className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-xs focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
+                />
+                <input
+                  type="password"
+                  value={newPassword}
+                  onChange={(event) => setNewPassword(event.target.value)}
+                  placeholder="New password (12+ characters)"
+                  autoComplete="new-password"
+                  minLength={12}
+                  maxLength={72}
+                  required
+                  className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-xs focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
+                />
+                <input
+                  type="password"
+                  value={confirmPassword}
+                  onChange={(event) => setConfirmPassword(event.target.value)}
+                  placeholder="Confirm new password"
+                  autoComplete="new-password"
+                  minLength={12}
+                  maxLength={72}
+                  required
+                  className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-xs focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
+                />
+                <button
+                  type="submit"
+                  disabled={passwordLoading}
+                  className="w-full rounded-lg border border-emerald-200 bg-emerald-50 py-2.5 text-xs font-bold text-emerald-800 transition-colors hover:bg-emerald-100 disabled:opacity-60"
+                >
+                  {passwordLoading ? 'Updating password…' : 'Update password'}
+                </button>
+              </form>
             </div>
 
             {/* Bottom Actions */}

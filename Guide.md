@@ -2,17 +2,19 @@
 
 This guide provides instructions for running and operating **Mentora**.
 
-> 🛡️ **Strict Admin Security Policy**: Public self-registration is disabled. Account creation (Students, Teachers, Admins), department setup, and course allocation are restricted exclusively to the **System Administrator**.
+> 🛡️ **Strict Admin Security Policy**: Public self-registration is disabled. Account creation (Students, Teachers, Admins), department setup, and course allocation are restricted exclusively to an authenticated **System Administrator**.
 
 ---
 
 ## 🔑 Default Administrator Credentials
 
-Upon starting the backend, the system automatically initializes the primary Administrator account:
+The local H2 development profile initializes this account once when it is absent:
 
 - **Email**: `admin@mentora.com`
 - **Password**: `admin@mentora`
 - **Role**: `ROLE_ADMIN`
+
+For production, configure `.env` from `.env.example`, leave administrator bootstrap disabled unless initial provisioning is required, and use a strong one-time password.
 
 ---
 
@@ -48,3 +50,7 @@ npm run dev
 2. Navigate to **Manage Users** (`/admin/users`) to create **Student**, **Teacher**, or **Administrator** accounts.
 3. Navigate to **Manage Departments** (`/admin/departments`) to define university departments and offered courses.
 4. Newly created Student and Teacher credentials can then be used to log into their respective portals!
+
+> The database was reset to a clean installation state. The demo administrator is the only retained account;
+> departments, courses, users, assignments, attendance, materials, discussions, announcements, and chat records
+> must be entered again through the administrator portal.

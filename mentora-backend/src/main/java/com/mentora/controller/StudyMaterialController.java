@@ -114,8 +114,8 @@ public class StudyMaterialController {
                 material.setFileName(originalFilename != null ? originalFilename : "uploaded_file.pdf");
                 material.setFileSize(formatBytes(file.getSize()));
             } else {
-                material.setFileName(title.replaceAll("\\s+", "_") + ".pdf");
-                material.setFileSize("1.0 MB");
+                material.setFileName(null);
+                material.setFileSize(null);
             }
 
             // Save first to get generated ID
@@ -125,7 +125,7 @@ public class StudyMaterialController {
             if (saved.getFileData() != null && saved.getFileData().length > 0) {
                 saved.setFileUrl("/api/v1/materials/" + saved.getId() + "/download");
             } else {
-                saved.setFileUrl("/api/v1/materials/files/" + saved.getFileName());
+                saved.setFileUrl(null);
             }
 
             saved = studyMaterialRepository.save(saved);
@@ -140,6 +140,9 @@ public class StudyMaterialController {
     public ResponseEntity<Resource> getFile(@PathVariable String fileName) {
         try {
             Path filePath = uploadDir.resolve(fileName).normalize();
+            if (!filePath.startsWith(uploadDir.normalize())) {
+                return ResponseEntity.badRequest().build();
+            }
             Resource resource = new UrlResource(filePath.toUri());
             if (resource.exists() && resource.isReadable()) {
                 String contentType = Files.probeContentType(filePath);
@@ -148,7 +151,7 @@ public class StudyMaterialController {
                 }
                 return ResponseEntity.ok()
                         .contentType(MediaType.parseMediaType(contentType))
-                        .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + (resource.getFilename() != null ? resource.getFilename() : fileName) + "\"")
+                        .header(HttpHeaders.CONTENT_DISPOSITION, contentDisposition(resource.getFilename() != null ? resource.getFilename() : fileName))
                         .body(resource);
             }
         } catch (Exception e) {
@@ -169,7 +172,7 @@ public class StudyMaterialController {
             String filename = material.getFileName() != null ? material.getFileName() : "document.pdf";
             String contentType = determineContentType(filename);
             return ResponseEntity.ok()
-                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
+                    .header(HttpHeaders.CONTENT_DISPOSITION, contentDisposition(filename))
                     .contentType(MediaType.parseMediaType(contentType))
                     .body(material.getFileData());
         }
@@ -188,7 +191,7 @@ public class StudyMaterialController {
                 String contentType = header.split(";")[0];
                 String filename = material.getFileName() != null ? material.getFileName() : "document.pdf";
                 return ResponseEntity.ok()
-                        .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
+                        .header(HttpHeaders.CONTENT_DISPOSITION, contentDisposition(filename))
                         .contentType(MediaType.parseMediaType(contentType))
                         .body(data);
             } catch (Exception e) {
@@ -211,6 +214,11 @@ public class StudyMaterialController {
         if (lower.endsWith(".png")) return "image/png";
         if (lower.endsWith(".jpg") || lower.endsWith(".jpeg")) return "image/jpeg";
         return "application/octet-stream";
+    }
+
+    private String contentDisposition(String filename) {
+        String safeFilename = filename == null ? "download" : filename.replaceAll("[\\r\\n\\\"]", "_");
+        return "attachment; filename=\"" + safeFilename + "\"";
     }
 
     @DeleteMapping("/{id}")

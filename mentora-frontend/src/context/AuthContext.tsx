@@ -20,8 +20,9 @@ const isTokenValid = (token: string | null): boolean => {
   try {
     const parts = token.split('.');
     if (parts.length !== 3) return false;
-    // atob works on base64url after padding fix
-    const payload = JSON.parse(atob(parts[1].replace(/-/g, '+').replace(/_/g, '/')));
+    const base64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+    const paddedBase64 = base64.padEnd(Math.ceil(base64.length / 4) * 4, '=');
+    const payload = JSON.parse(atob(paddedBase64));
     if (!payload.exp) return false;
     // exp is in seconds; Date.now() is in milliseconds
     return payload.exp * 1000 > Date.now();

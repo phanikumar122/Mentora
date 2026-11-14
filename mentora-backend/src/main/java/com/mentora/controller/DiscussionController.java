@@ -46,10 +46,9 @@ public class DiscussionController {
             @RequestBody DiscussionPost post,
             Authentication authentication) {
         if (authentication != null) {
-            User author = userRepository.findByEmail(authentication.getName()).orElse(null);
-            if (author != null) {
-                post.setAuthor(author);
-            }
+            User author = userRepository.findByEmailIgnoreCase(authentication.getName())
+                    .orElseThrow(() -> new IllegalArgumentException("Authenticated user account was not found."));
+            post.setAuthor(author);
         }
         return ResponseEntity.ok(postRepository.save(post));
     }
@@ -67,10 +66,9 @@ public class DiscussionController {
                 .orElseThrow(() -> new ResourceNotFoundException("Discussion post not found with id: " + id));
         reply.setPost(post);
         if (authentication != null) {
-            User author = userRepository.findByEmail(authentication.getName()).orElse(null);
-            if (author != null) {
-                reply.setAuthor(author);
-            }
+            User author = userRepository.findByEmailIgnoreCase(authentication.getName())
+                    .orElseThrow(() -> new IllegalArgumentException("Authenticated user account was not found."));
+            reply.setAuthor(author);
         }
         return ResponseEntity.ok(replyRepository.save(reply));
     }
@@ -86,12 +84,16 @@ public class DiscussionController {
 
     @DeleteMapping("/posts/{id}")
     @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<?> deletePost(@PathVariable Long id) {
-        try {
-            postRepository.deleteById(id);
-            return ResponseEntity.ok(Map.of("message", "Discussion post deleted successfully!"));
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().body(Map.of("message", "Failed to delete post: " + e.getMessage()));
+    public ResponseEntity<?> deletePost(@PathVariable Long id, Authentication authentication) {
+        DiscussionPost post = postRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Discussion post not found with id: " + id));
+        User currentUser = userRepository.findByEmailIgnoreCase(authentication.getName())
+                .orElseThrow(() -> new IllegalArgumentException("Authenticated user account was not found."));
+        boolean isOwner = post.getAuthor() != null && currentUser.getId().equals(post.getAuthor().getId());
+        if (!isOwner && currentUser.getRole() != com.mentora.entity.Role.ROLE_ADMIN) {
+            return ResponseEntity.status(403).body(Map.of("message", "Only the post author or an administrator may delete this discussion."));
         }
+        postRepository.delete(post);
+        return ResponseEntity.ok(Map.of("message", "Discussion post deleted successfully!"));
     }
 }

@@ -11,7 +11,6 @@ import {
   AlertCircle,
   GraduationCap,
   MessageSquare,
-  Sparkles,
   FolderDown,
   Activity,
   ChevronRight,
@@ -86,7 +85,7 @@ export const StudentDashboard: React.FC = () => {
               Welcome back, {user?.firstName || 'Scholar'}!
             </h2>
             <p className="hero-subtitle">
-              You have <strong className="text-slate-900 font-bold">{pendingAssignments.length} active coursework tasks</strong> due this term. Your attendance compliance stands at <strong className="text-slate-900 font-bold">{overallAttendance !== null ? `${overallAttendance.toFixed(1)}%` : '96.2%'}</strong>.
+              You have <strong className="text-slate-900 font-bold">{pendingAssignments.length} active coursework tasks</strong> due this term. Attendance is <strong className="text-slate-900 font-bold">{overallAttendance !== null ? `${overallAttendance.toFixed(1)}%` : 'not recorded yet'}</strong>.
             </p>
           </div>
 
@@ -98,10 +97,10 @@ export const StudentDashboard: React.FC = () => {
             <div className="space-y-0.5">
               <span className="text-[10px] text-slate-500 uppercase font-bold tracking-wider block">Faculty Mentor</span>
               <p className="text-xs font-bold text-slate-900 leading-tight block">
-                {advisor ? advisor.advisorName : 'Prof. Sarah Jenkins'}
+                {advisor ? advisor.advisorName : 'Not assigned yet'}
               </p>
               <p className="text-[11px] text-slate-500 block">
-                {advisor?.designation || 'Associate Professor'}
+                {advisor?.designation || 'Contact administration for assignment'}
               </p>
             </div>
             <button
@@ -123,7 +122,7 @@ export const StudentDashboard: React.FC = () => {
           </div>
           <div>
             <p className="metric-label">Attendance Rate</p>
-            <p className="metric-value">{overallAttendance !== null ? `${overallAttendance.toFixed(1)}%` : '96.2%'}</p>
+            <p className="metric-value">{overallAttendance !== null ? `${overallAttendance.toFixed(1)}%` : '—'}</p>
             <span className="metric-sub text-emerald-700">
               <Activity className="w-3 h-3" />
               Compliance: {complianceStatus}
@@ -137,9 +136,9 @@ export const StudentDashboard: React.FC = () => {
           </div>
           <div>
             <p className="metric-label">Cumulative GPA</p>
-            <p className="metric-value">3.88</p>
+            <p className="metric-value">—</p>
             <span className="metric-sub text-emerald-700">
-              Top 5% of Department
+              Published after grading
             </span>
           </div>
         </div>

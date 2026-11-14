@@ -9,14 +9,11 @@ import com.mentora.repository.UserRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
-import org.springframework.messaging.handler.annotation.MessageMapping;
-import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
-import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -36,15 +33,13 @@ public class ChatController {
         this.userRepository = userRepository;
     }
 
-    @MessageMapping("/chat.sendMessage")
-    public void processMessage(@Payload ChatMessageDto chatMessageDto) {
-        saveAndBroadcastMessage(chatMessageDto, null);
-    }
-
     @PostMapping("/messages")
-    public ResponseEntity<ChatMessageDto> sendMessageRest(
+    public ResponseEntity<?> sendMessageRest(
             @RequestBody ChatMessageDto chatMessageDto,
             Authentication authentication) {
+        if (authentication == null) {
+            return ResponseEntity.status(401).body(java.util.Map.of("message", "Authentication is required."));
+        }
         ChatMessageDto savedDto = saveAndBroadcastMessage(chatMessageDto, authentication);
         return ResponseEntity.ok(savedDto);
     }
@@ -52,7 +47,15 @@ public class ChatController {
     @GetMapping("/messages/{senderId}/{recipientId}")
     public ResponseEntity<List<ChatMessageDto>> getDirectMessages(
             @PathVariable String senderId,
-            @PathVariable String recipientId) {
+            @PathVariable String recipientId,
+            Authentication authentication) {
+        if (authentication == null) {
+            return ResponseEntity.status(401).build();
+        }
+        User currentUser = userRepository.findByEmailIgnoreCase(authentication.getName()).orElse(null);
+        if (currentUser == null) {
+            return ResponseEntity.status(401).build();
+        }
         
         // Resolve user 1 ID
         String u1Id = senderId;
@@ -70,12 +73,13 @@ public class ChatController {
             u2Id = u2.getId();
         }
 
-        // Students can only access chats with Teachers and Admins (not other students)
-        if (u1 != null && u2 != null) {
-            if (u1.getRole() == Role.ROLE_STUDENT && u2.getRole() == Role.ROLE_STUDENT) {
-                log.warn("Blocked direct message fetch attempt between students: senderId={}, recipientId={}", u1Id, u2Id);
-                return ResponseEntity.ok(Collections.emptyList());
-            }
+        if (!currentUser.getId().equals(u1Id) && !currentUser.getId().equals(u2Id)) {
+            return ResponseEntity.status(403).build();
+        }
+
+        if (u1 != null && u2 != null && !canCommunicate(u1, u2)) {
+            log.warn("Blocked direct message fetch for disallowed role pair: senderId={}, recipientId={}", u1Id, u2Id);
+            return ResponseEntity.status(403).build();
         }
 
         List<ChatMessage> messages = chatMessageRepository.findDirectMessagesBetween(u1Id, u2Id);
@@ -95,12 +99,14 @@ public class ChatController {
 
     private ChatMessageDto saveAndBroadcastMessage(ChatMessageDto chatMessageDto, Authentication authentication) {
         User sender = null;
-        if (chatMessageDto.getSenderId() != null && !chatMessageDto.getSenderId().isEmpty()) {
+        if (authentication != null) {
+            sender = userRepository.findByEmailIgnoreCase(authentication.getName()).orElse(null);
+        } else if (chatMessageDto.getSenderId() != null && !chatMessageDto.getSenderId().isEmpty()) {
             sender = userRepository.findById(chatMessageDto.getSenderId())
                     .orElseGet(() -> userRepository.findByEmail(chatMessageDto.getSenderId()).orElse(null));
         }
-        if (sender == null && authentication != null) {
-            sender = userRepository.findByEmail(authentication.getName()).orElse(null);
+        if (sender == null) {
+            throw new IllegalArgumentException("Unable to resolve the authenticated sender.");
         }
 
         User recipient = null;
@@ -109,12 +115,16 @@ public class ChatController {
                     .orElseGet(() -> userRepository.findByEmail(chatMessageDto.getRecipientId()).orElse(null));
         }
 
-        // Restriction: Students cannot send messages to other students
-        if (sender != null && recipient != null) {
-            if (sender.getRole() == Role.ROLE_STUDENT && recipient.getRole() == Role.ROLE_STUDENT) {
-                log.warn("Blocked messaging attempt between students: sender={}, recipient={}", sender.getId(), recipient.getId());
-                return chatMessageDto;
-            }
+        if (sender != null && recipient != null && !canCommunicate(sender, recipient)) {
+            log.warn("Blocked messaging attempt for disallowed role pair: sender={}, recipient={}", sender.getId(), recipient.getId());
+            throw new IllegalArgumentException("This direct conversation is not allowed for the selected account roles.");
+        }
+
+        if (recipient == null) {
+            throw new IllegalArgumentException("A valid recipient is required.");
+        }
+        if (chatMessageDto.getContent() == null || chatMessageDto.getContent().trim().isEmpty()) {
+            throw new IllegalArgumentException("Message content is required.");
         }
 
         if (sender != null) {
@@ -122,7 +132,7 @@ public class ChatController {
                     .sender(sender)
                     .recipient(recipient)
                     .roomId(chatMessageDto.getRoomId())
-                    .content(chatMessageDto.getContent())
+                    .content(chatMessageDto.getContent().trim())
                     .sentAt(LocalDateTime.now())
                     .isRead(false)
                     .build();
@@ -138,21 +148,30 @@ public class ChatController {
 
             if (recipient != null) {
                 try {
-                    // Direct user topic broadcasts for instant zero-latency STOMP subscription
-                    messagingTemplate.convertAndSend("/topic/user/" + recipient.getId(), chatMessageDto);
-                    messagingTemplate.convertAndSend("/topic/user/" + sender.getId(), chatMessageDto);
-                    messagingTemplate.convertAndSendToUser(recipient.getId(), "/queue/messages", chatMessageDto);
+                    messagingTemplate.convertAndSendToUser(recipient.getEmail(), "/queue/messages", chatMessageDto);
+                    messagingTemplate.convertAndSendToUser(sender.getEmail(), "/queue/messages", chatMessageDto);
                 } catch (Exception e) {
                     log.warn("STOMP direct delivery failed for recipient='{}': {}", recipient.getId(), e.getMessage());
-                }
-            } else if (chatMessageDto.getRoomId() != null) {
-                try {
-                    messagingTemplate.convertAndSend("/topic/room/" + chatMessageDto.getRoomId(), chatMessageDto);
-                } catch (Exception e) {
-                    log.warn("STOMP room broadcast failed for roomId='{}': {}", chatMessageDto.getRoomId(), e.getMessage());
                 }
             }
         }
         return chatMessageDto;
+    }
+
+    private boolean canCommunicate(User first, User second) {
+        if (first.getId().equals(second.getId())) return false;
+        if (first.getRole() == Role.ROLE_STUDENT) {
+            return second.getRole() == Role.ROLE_TEACHER || second.getRole() == Role.ROLE_ADMIN;
+        }
+        if (second.getRole() == Role.ROLE_STUDENT) {
+            return first.getRole() == Role.ROLE_TEACHER || first.getRole() == Role.ROLE_ADMIN;
+        }
+        if (first.getRole() == Role.ROLE_PARENT) {
+            return second.getRole() == Role.ROLE_TEACHER || second.getRole() == Role.ROLE_ADMIN;
+        }
+        if (second.getRole() == Role.ROLE_PARENT) {
+            return first.getRole() == Role.ROLE_TEACHER || first.getRole() == Role.ROLE_ADMIN;
+        }
+        return true;
     }
 }

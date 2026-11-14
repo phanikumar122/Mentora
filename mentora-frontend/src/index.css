@@ -7,14 +7,14 @@
 @layer base {
   :root {
     /* ── Pure Light Academic Emerald Green Color System ── */
-    --bg-app: #f8fafc;
+    --bg-app: #f4f7f6;
     --bg-surface: #ffffff;
     --bg-surface-elevated: #f1f5f9;
     --border-subtle: #e2e8f0;
     --border-strong: #cbd5e1;
 
-    --text-primary: #0f172a;
-    --text-secondary: #334155;
+    --text-primary: #102a2a;
+    --text-secondary: #34504f;
     --text-muted: #64748b;
 
     /* Green System Tokens */
@@ -63,6 +63,11 @@
     overflow-x: hidden;
     max-width: 100vw;
     width: 100%;
+  }
+
+  ::selection {
+    background: #a7f3d0;
+    color: #022c22;
   }
 
   #root {
@@ -128,7 +133,7 @@
     border: 1px solid var(--border-subtle);
     border-radius: var(--card-radius);
     padding: var(--card-padding);
-    box-shadow: 0 1px 3px 0 rgba(15, 23, 42, 0.04);
+    box-shadow: 0 8px 30px -24px rgba(2, 44, 34, 0.42);
     transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
   }
 
@@ -151,7 +156,7 @@
     display: flex;
     align-items: center;
     gap: 1.15rem;
-    box-shadow: 0 1px 3px 0 rgba(15, 23, 42, 0.04);
+    box-shadow: 0 8px 30px -24px rgba(2, 44, 34, 0.42);
     transition: border-color 0.2s ease, box-shadow 0.2s ease;
   }
 
@@ -330,10 +335,20 @@
     border-radius: 0.875rem;
     position: relative;
     overflow: hidden;
-    background-color: #ffffff;
+    background:
+      radial-gradient(circle at 92% 18%, rgba(16, 185, 129, 0.13), transparent 22%),
+      linear-gradient(120deg, #ffffff 0%, #f3fbf7 100%);
     color: #0f172a;
     border: 1px solid #e2e8f0;
     box-shadow: 0 1px 3px 0 rgba(15, 23, 42, 0.04);
+  }
+
+  .hero-banner::before {
+    content: '';
+    position: absolute;
+    inset: 0 auto 0 0;
+    width: 4px;
+    background: linear-gradient(180deg, #10b981, #047857);
   }
 
   .hero-banner-inner {
@@ -464,6 +479,15 @@
     background-color: #e2e8f0;
     margin: 0.75rem 0;
   }
+}
+
+.workspace-canvas {
+  position: relative;
+  background-color: var(--bg-app);
+  background-image:
+    linear-gradient(rgba(6, 78, 59, 0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(6, 78, 59, 0.025) 1px, transparent 1px);
+  background-size: 32px 32px;
 }
 
 /* ============================================================
