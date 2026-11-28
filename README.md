@@ -102,26 +102,3 @@ npm run lint
 ```
 
 ---
-
-## Deployment Guide
-
-- **Configuration**: Copy `.env.example` to `.env` and replace every placeholder with a real secret.
-- **Database**: The `prod` Spring profile expects a MySQL-compatible database through `MENTORA_DB_URL`, `MENTORA_DB_USER`, and `MENTORA_DB_PASS`.
-- **Public URLs**: Set `MENTORA_CORS_ORIGINS` to the exact HTTPS frontend origin and `VITE_API_URL` to the public HTTPS backend URL ending in `/api/v1`.
-- **Safety**: Keep `MENTORA_BOOTSTRAP_ADMIN_ENABLED=false`; the retained administrator already exists in TiDB. Do not commit `.env`.
-- **Backend Service**: Render / Railway (Deploy `mentora-backend` using Docker or Java runtime).
-- **Frontend App**: Vercel / Netlify (Deploy `mentora-frontend` with build command `npm run build`).
-
-### Production checklist
-
-1. Change the retained demo administrator password before exposing the application publicly.
-2. Use a new random `MENTORA_JWT_SECRET` of at least 32 characters and keep it stable across restarts.
-3. Set `SPRING_PROFILES_ACTIVE=prod` on the backend.
-4. Set `MENTORA_CORS_ORIGINS` to the exact frontend HTTPS origin, without a trailing slash.
-5. Build the frontend with `VITE_API_URL=https://your-backend.example/api/v1`.
-6. Attach persistent storage to `/app/uploads` when using assignment file submissions.
-7. Verify `/api/v1/health`, sign-in, account creation, and chat after deployment.
-
-The one-time database reset has already been completed. No destructive reset runner is shipped with
-the production application. Production configuration must provide explicit `MENTORA_CORS_ORIGINS`
-and `VITE_API_URL` values using the public HTTPS frontend and backend domains.
